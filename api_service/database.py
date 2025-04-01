@@ -23,3 +23,16 @@ def get_sensor_data():
     return [
         {"temperature": d[0], "humidity": d[1], "co2": d[2], "light": d[3], "soil_moisture": d[4]} for d in data
     ]
+
+
+
+
+def insert_sensor_data(sensor_data):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO sensor_data (temperature, humidity, co2, light, soil_moisture) VALUES (%s, %s, %s, %s, %s)",
+        (sensor_data.temperature, sensor_data.humidity, sensor_data.co2, sensor_data.light, sensor_data.soil_moisture),
+    )
+    conn.commit()
+    conn.close()
