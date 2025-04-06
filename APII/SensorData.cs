@@ -6,6 +6,7 @@ public class SensorData
         public float Humidity { get; set; }
         public float Co2 { get; set; }
         public float Light { get; set; }
-        public float SoilMoisture { get; set; }
+        public float soil_moisture { get; set; }
+
 
 }

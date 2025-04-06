@@ -35,3 +35,4 @@ C:\Users\adres\RiderProjects\Sep4_M\APII\obj\Debug\net8.0\refint\APII.dll
 C:\Users\adres\RiderProjects\Sep4_M\APII\obj\Debug\net8.0\APII.pdb
 C:\Users\adres\RiderProjects\Sep4_M\APII\obj\Debug\net8.0\APII.genruntimeconfig.cache
 C:\Users\adres\RiderProjects\Sep4_M\APII\obj\Debug\net8.0\ref\APII.dll
+C:\Users\adres\RiderProjects\Sep4_M\APII\bin\Debug\net8.0\Newtonsoft.Json.dll
