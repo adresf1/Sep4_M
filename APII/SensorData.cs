@@ -21,8 +21,6 @@ public class SensorData
     public string Timestamp { get; set; }
     public string SoilType { get; set; }
     public string FertilizerType { get; set; }
-    public string ModelType { get; set; }
-    public string PredictedData { get; set; }
     // Calculated figures
     public float LightVariation { get; set; }
     public float WaterNeedScore { get; set; }
