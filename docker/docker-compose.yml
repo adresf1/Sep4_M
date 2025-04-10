@@ -1,0 +1,13 @@
+services:
+  sep4-python-env:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: sep4-python-env
+    container_name: ml-container
+    volumes:
+      - ../:/app
+    working_dir: /app
+    command: bash
+    stdin_open: true
+    tty: true
