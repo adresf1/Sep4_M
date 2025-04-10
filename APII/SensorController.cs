@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using API;
@@ -15,7 +16,6 @@ using Newtonsoft.Json;
         private readonly HttpClient _httpClient;
         private readonly string _pythonServiceUrl = "http://localhost:5000/fetch-sensor-data";
 
-        // Constructor for injecting HttpClient
         public SensorController(HttpClient httpClient)
         {
             _httpClient = httpClient;
@@ -27,10 +27,8 @@ using Newtonsoft.Json;
         {
             try
             {
-                // Hent data fra Python-service via HTTP GET
                 var response = await _httpClient.GetStringAsync(_pythonServiceUrl);
                 
-                // Deserialisér JSON-dataen til en liste af SensorData
                 var data = JsonConvert.DeserializeObject<List<SensorData>>(response);
 
                 return Ok(data);
@@ -47,7 +45,6 @@ using Newtonsoft.Json;
         {
             try
             {
-                // Send data til Python-service via HTTP POST
                 var content = new StringContent(JsonConvert.SerializeObject(sensorDataList), System.Text.Encoding.UTF8, "application/json");
                 var response = await _httpClient.PostAsync(_pythonServiceUrl, content);
 
@@ -64,5 +61,21 @@ using Newtonsoft.Json;
             }
         }
         
+        [HttpGet("model")]
+        public async Task<ActionResult<string>> GetModel()
+        {
+            try
+            {
+                // Hent model fra Python-service via HTTP GET
+                var response = await _httpClient.GetStringAsync("http://localhost:5000/get-model");
+                
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Error retrieving model: {ex.Message}");
+            }
         }
+            
+    }
         
