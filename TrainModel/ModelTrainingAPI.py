@@ -4,7 +4,6 @@
 import sys, os
 from flask import Flask, request, jsonify
 import pandas as pd
-from DemoDataClass import create_plant_data_class
 from TrainRFCModel import train_RFC_model
 from Predict import unpack_model, makePrediction, REQUIRED_FIELDS_RFC
 from sqlalchemy import create_engine
@@ -53,7 +52,6 @@ def get_model_for_table(table_name, DATABASE_URL):
 @app.route('/train', methods=['POST'])
 def train():
     # Get the incoming JSON data from the request
-    DATABASE_URL = #insert the connection string here 
     data = request.get_json()
 
     if not data:
@@ -71,6 +69,7 @@ def train():
         if not table_name or not target_measure or not model_name:
             return jsonify({"error": "Missing required fields: 'table_name', 'model_name' and 'target_measure'"}), 400
 
+        DATABASE_URL = data.get('db_url')
         # Get the model class for the given table name
         PlantModel = get_model_for_table(table_name, DATABASE_URL)
 
