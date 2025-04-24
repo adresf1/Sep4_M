@@ -3,10 +3,12 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+    ports:
+      - "5000:5000"
     image: sep4-python-env
     container_name: ml-container
     volumes:
-      - ../:/app
+         - ../TrainModel/TrainedModels:/app/TrainModel/TrainedModels
     working_dir: /app
     command: bash
     stdin_open: true

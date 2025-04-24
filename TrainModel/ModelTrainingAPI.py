@@ -101,6 +101,7 @@ def train():
         return jsonify(response), 200
 
     except Exception as e:
+        print("Hello before exception")
         print(str(e))
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -131,8 +132,9 @@ def predict():
                 return jsonify({
                     "error": f"Missing fields for 'rfc' model: {', '.join(missing_fields)}"
                 }), 400
+        
 
-        model = unpack_model("RandomForestRegressor.joblib","TrainedModels")
+        model = unpack_model(model_name,"TrainedModels")
         result = makePrediction(model, data)
         print(result)
         # Return detailed success response
@@ -147,6 +149,7 @@ def predict():
         print(str(e))
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print("Hello before exeption")    
         print(exc_type, fname, exc_tb.tb_lineno)
         return jsonify({"error": str(e),
                         "ErrorInfo": str(exc_type) + str(fname) + str(exc_tb.tb_lineno)
