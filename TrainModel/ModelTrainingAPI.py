@@ -26,14 +26,14 @@ def save_model_to_folder(rfc, model_name, folder_name):
     
     # Generate the full file path
     model_filename = f"{model_name}.joblib"
-    model_path = os.path.join(folder_name, model_filename)
+    model_path = os.path.join(os.getcwd(),folder_name, model_filename)
     
     # Check if a model with the same name already exists
     if os.path.exists(model_path):
         # If conflict exists, append a timestamp to the file name
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         model_filename = f"{model_name}_{timestamp}.joblib"
-        model_path = os.path.join(folder_name, model_filename)
+        model_path = os.path.join(os.getcwd(),folder_name, model_filename)
     
     # Save the model
     joblib.dump(rfc, model_path)

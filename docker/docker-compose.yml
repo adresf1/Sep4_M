@@ -9,7 +9,7 @@ services:
     container_name: ml-container
     volumes:
          - ../TrainModel/TrainedModels:/app/TrainModel/TrainedModels
-    working_dir: /app
-    command: bash
+    working_dir: /app/TrainModel
+    command:  python ModelTrainingAPI.py
     stdin_open: true
     tty: true
