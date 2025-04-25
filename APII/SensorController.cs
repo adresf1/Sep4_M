@@ -13,11 +13,13 @@ using Newtonsoft.Json;
     [ApiController]
     public class SensorController : ControllerBase
     {
+
         private readonly HttpClient _httpClient;
         private readonly string _pythonServiceUrl = "http://localhost:5000/fetch-sensor-data";
 
         public SensorController(HttpClient httpClient)
         {
+            Console.WriteLine("Hello World!");
             _httpClient = httpClient;
         }
 
@@ -27,6 +29,7 @@ using Newtonsoft.Json;
         {
             try
             {
+                Console.WriteLine("Hi from get sensors!");
                 var response = await _httpClient.GetStringAsync(_pythonServiceUrl);
                 
                 var data = JsonConvert.DeserializeObject<List<SensorData>>(response);

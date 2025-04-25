@@ -4,12 +4,22 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     ports:
-      - "5000:5000"
+      - "9000:5000"
     image: sep4-python-env
-    container_name: ml-container
+    container_name: Model-Training-Container
     volumes:
          - ../TrainModel/TrainedModels:/app/TrainModel/TrainedModels
     working_dir: /app/TrainModel
     command:  python ModelTrainingAPI.py
     stdin_open: true
     tty: true
+  sep4-dotnet-env:
+    build:
+      context: ../APII
+      dockerfile: Dockerfile
+    image: sep4-dotnet-env
+    container_name: API-container
+    ports:
+      - "9001:8800"  # or whatever port your app exposes
+    depends_on:
+      - sep4-python-env
