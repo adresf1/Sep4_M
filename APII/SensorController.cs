@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using API;
+using APII;
 using Newtonsoft.Json;
  [Route("api/[controller]")]
     [ApiController]
@@ -41,25 +42,35 @@ using Newtonsoft.Json;
 
         // POST: api/sensors
         [HttpPost]
-        public async Task<ActionResult<IEnumerable<SensorData>>> CreateSensorData([FromBody] List<SensorData> sensorDataList)
+        public async Task<ActionResult<string>> PostSensorData([FromBody] PostSensorData sensorData)
         {
             try
             {
-                var content = new StringContent(JsonConvert.SerializeObject(sensorDataList), System.Text.Encoding.UTF8, "application/json");
+                // Wrap the object in a list
+                var payload = new List<PostSensorData> { sensorData };
+                var json = JsonConvert.SerializeObject(payload);
+
+                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
                 var response = await _httpClient.PostAsync(_pythonServiceUrl, content);
 
                 if (response.IsSuccessStatusCode)
                 {
-                    return CreatedAtAction(nameof(GetSensors), new { count = sensorDataList.Count }, sensorDataList);
+                    return Ok("Sensor data sent successfully.");
                 }
-
-                return BadRequest("Error sending sensor data to Python service.");
+                else
+                {
+                    var errorResponse = await response.Content.ReadAsStringAsync();
+                    return BadRequest($"Failed to send sensor data. Python response: {errorResponse}");
+                }
             }
             catch (Exception ex)
             {
-                return BadRequest($"Error posting sensor data: {ex.Message}");
+                return BadRequest($"Error sending sensor data: {ex.Message}");
             }
         }
+
+        
+        
         
         [HttpGet("model")]
         public async Task<ActionResult<string>> GetModel()
