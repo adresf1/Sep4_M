@@ -1,16 +1,29 @@
+version: '3.8'
 services:
-  sep4-python-env:
+  Sep4-ModelTraining-Service:
     build:
       context: ..
       dockerfile: docker/Dockerfile
     ports:
-      - "9000:5000"
+      - "5010:5000"
     image: sep4-python-env
     container_name: Model-Training-Container
     volumes:
          - ../TrainModel/TrainedModels:/app/TrainModel/TrainedModels
     working_dir: /app/TrainModel
     command:  python ModelTrainingAPI.py
+    stdin_open: true
+    tty: true
+  Sep4-DataProcessing-Service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "5000:5000"
+    image: sep4-python-env
+    container_name: Data-Processing-Container
+    working_dir: /app/DataProcessing
+    command:  python DataProcessing.py
     stdin_open: true
     tty: true
   sep4-dotnet-env:
@@ -20,6 +33,6 @@ services:
     image: sep4-dotnet-env
     container_name: API-container
     ports:
-      - "9001:8800"  # or whatever port your app exposes
+      - "5020:8080"  # 
     depends_on:
-      - sep4-python-env
+      - Sep4-DataProcessing-Service
