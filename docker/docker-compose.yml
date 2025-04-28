@@ -26,7 +26,7 @@ services:
     command:  python DataProcessing.py
     stdin_open: true
     tty: true
-  sep4-dotnet-env:
+  Sep4-API-Service:
     build:
       context: ../APII
       dockerfile: Dockerfile
@@ -36,3 +36,14 @@ services:
       - "5020:8080"  # 
     depends_on:
       - Sep4-DataProcessing-Service
+
+  Sep4-ML_Service-Service:
+    build:
+      context: ../APII
+      dockerfile: Dockerfile
+    image: sep4-dotnet-env
+    container_name: ML_Service-container
+    ports:
+      - "5030:8080"  # 
+    depends_on:
+      - Sep4-ModelTraining-Service
