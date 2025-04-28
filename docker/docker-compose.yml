@@ -6,46 +6,60 @@ services:
       dockerfile: docker/Dockerfile
     ports:
       - "5010:5000"
-    image: sep4-python-env
+    image: sep4-modeltraining-env
     container_name: Model-Training-Container
     volumes:
-         - ../TrainModel/TrainedModels:/app/TrainModel/TrainedModels
+      - ../TrainModel/TrainedModels:/app/TrainModel/TrainedModels
     working_dir: /app/TrainModel
-    command:  python ModelTrainingAPI.py
+    command: python ModelTrainingAPI.py
     stdin_open: true
     tty: true
+    networks:
+      - sep4-network
+
   Sep4-DataProcessing-Service:
     build:
       context: ..
       dockerfile: docker/Dockerfile
     ports:
       - "5000:5000"
-    image: sep4-python-env
-    container_name: Data-Processing-Container
+    image: sep4-dataprocessing-env
+    container_name: data-processing-container
     working_dir: /app/DataProcessing
-    command:  python DataProcessing.py
+    command: python DataProcessing.py
     stdin_open: true
     tty: true
+    networks:
+      - sep4-network
+
   Sep4-API-Service:
     build:
       context: ../APII
       dockerfile: Dockerfile
-    image: sep4-dotnet-env
+    image: sep4-api-env
     container_name: API-container
     ports:
-      - "5020:8080"  # 
+      - "5020:8080"
     depends_on:
       - Sep4-DataProcessing-Service
+    networks:
+      - sep4-network
+
   Sep4-ML-Service:
     build:
       context: ../MLService
       dockerfile: Dockerfile
-    image: sep4-dotnet-env
+    image: sep4-ml-env
     container_name: ML_Service-container
     ports:
-      - "5030:8080"  # Maps port 5030 on the host to port 8080 in the container
+      - "5030:8080"
     depends_on:
       - Sep4-ModelTraining-Service
     environment:
-      - ASPNETCORE_URLS=http://+:8080  # Configure the app to listen on port 8080
+      - ASPNETCORE_URLS=http://+:8080
+    networks:
+      - sep4-network
 
+networks:
+  sep4-network:
+    driver: bridge

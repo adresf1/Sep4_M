@@ -15,7 +15,7 @@ using Newtonsoft.Json;
     public class SensorController : ControllerBase
     {
         private readonly HttpClient _httpClient;
-        private readonly string _pythonServiceUrl = "http://localhost:5000/fetch-sensor-data";
+        private readonly string _pythonServiceUrl = "http://Sep4-DataProcessing-Service:5000/fetch-sensor-data";
 
         public SensorController(HttpClient httpClient)
         {

@@ -8,7 +8,7 @@ import math
 
 app = Flask(__name__)
 print("Starting app...")
-app.config['SQLALCHEMY_DATABASE_URI'] = ''
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://ujmpoinam3senrd9at7f:T66ndZSXpsASQnGR4Sl6@b4miactrrxbtqyg0obdl-postgresql.services.clever-cloud.com:50013/b4miactrrxbtqyg0obdl'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -90,6 +90,41 @@ def post_sensor_data():
         db.session.commit()
         return jsonify({'status': 'Data saved successfully'}), 201
 
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/fetch-sensor-data', methods=['GET'])
+def fetch_sensor_data():
+    try:
+        data = SensorData.query.all()
+        results = []
+
+        for d in data:
+            results.append({
+                "id": d.id,
+                "air_temperature": d.air_temperature,
+                "air_humidity": d.air_humidity,
+                "soil_moisture": d.soil_moisture,
+                "light": d.light,
+                "light_type": d.light_type,
+                "light_max": d.light_max,
+                "light_min": d.light_min,
+                "artificial_light": d.artificial_light,
+                "light_avg": d.light_avg,
+                "distance_to_height": d.distance_to_height,
+                "water": d.water,
+                "time_since_last_watering": d.time_since_last_watering,
+                "water_amount": d.water_amount,
+                "watering_frequency": d.watering_frequency,
+                "timestamp": d.timestamp,
+                "soil_type": d.soil_type,
+                "fertilizer_type": d.fertilizer_type,
+                "experiment_number": d.experiment_number,
+                "light_variation": d.light_variation,
+                "water_need_score": d.water_need_score
+            })
+
+        return jsonify(results), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
