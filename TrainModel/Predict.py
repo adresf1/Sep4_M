@@ -28,7 +28,7 @@ def unpack_model(model_filename, target_folder="TrainedModels"):
     base_filename = os.path.basename(model_filename)
     
     # Build the target path
-    target_path = os.path.join(target_folder, base_filename)
+    target_path = os.path.join(os.getcwd(),target_folder, base_filename)
     print("target_path:", target_path)
     
     # Load and return the model

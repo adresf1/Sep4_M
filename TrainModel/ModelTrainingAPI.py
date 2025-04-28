@@ -4,7 +4,6 @@
 import sys, os
 from flask import Flask, request, jsonify
 import pandas as pd
-# from DemoDataClass import create_plant_data_class
 from TrainRFCModel import train_RFC_model
 from Predict import unpack_model, makePrediction, REQUIRED_FIELDS_RFC
 from sqlalchemy import create_engine
@@ -27,14 +26,14 @@ def save_model_to_folder(rfc, model_name, folder_name):
     
     # Generate the full file path
     model_filename = f"{model_name}.joblib"
-    model_path = os.path.join(folder_name, model_filename)
+    model_path = os.path.join(os.getcwd(),folder_name, model_filename)
     
     # Check if a model with the same name already exists
     if os.path.exists(model_path):
         # If conflict exists, append a timestamp to the file name
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         model_filename = f"{model_name}_{timestamp}.joblib"
-        model_path = os.path.join(folder_name, model_filename)
+        model_path = os.path.join(os.getcwd(),folder_name, model_filename)
     
     # Save the model
     joblib.dump(rfc, model_path)
@@ -46,14 +45,13 @@ def save_model_to_folder(rfc, model_name, folder_name):
 def get_model_for_table(table_name, DATABASE_URL):
     if table_name not in _model_cache:
         engine = create_engine(DATABASE_URL)
-        #_model_cache[table_name] = create_plant_data_class(table_name)
+        _model_cache[table_name] = create_plant_data_class(table_name)
     return _model_cache[table_name]
 
 # API endpoint to train the model
 @app.route('/train', methods=['POST'])
 def train():
     # Get the incoming JSON data from the request
-    DATABASE_URL = '' #insert the connection string here
     data = request.get_json()
 
     if not data:
@@ -71,6 +69,7 @@ def train():
         if not table_name or not target_measure or not model_name:
             return jsonify({"error": "Missing required fields: 'table_name', 'model_name' and 'target_measure'"}), 400
 
+        DATABASE_URL = data.get('db_url')
         # Get the model class for the given table name
         PlantModel = get_model_for_table(table_name, DATABASE_URL)
 
@@ -102,6 +101,7 @@ def train():
         return jsonify(response), 200
 
     except Exception as e:
+        print("Hello before exception")
         print(str(e))
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -132,8 +132,9 @@ def predict():
                 return jsonify({
                     "error": f"Missing fields for 'rfc' model: {', '.join(missing_fields)}"
                 }), 400
+        
 
-        model = unpack_model("RandomForestRegressor.joblib","TrainedModels")
+        model = unpack_model(model_name,"TrainedModels")
         result = makePrediction(model, data)
         print(result)
         # Return detailed success response
@@ -148,8 +149,11 @@ def predict():
         print(str(e))
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print("Hello before exeption")    
         print(exc_type, fname, exc_tb.tb_lineno)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e),
+                        "ErrorInfo": str(exc_type) + str(fname) + str(exc_tb.tb_lineno)
+                        }), 500
 
 
 
