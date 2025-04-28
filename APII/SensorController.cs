@@ -69,9 +69,6 @@ using Newtonsoft.Json;
             }
         }
 
-        
-        
-        
         [HttpGet("model")]
         public async Task<ActionResult<string>> GetModel()
         {
@@ -87,6 +84,34 @@ using Newtonsoft.Json;
                 return BadRequest($"Error retrieving model: {ex.Message}");
             }
         }
+
+        [HttpPost("prediction")]
+        public async Task<ActionResult<string>> PostPrediction([FromBody] PredictionInput input)
+        {
+            try
+            {
+                var json = JsonConvert.SerializeObject(input);
+                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.PostAsync("http://localhost:5030/prediction", content);
+
+                if (response.IsSuccessStatusCode)
+        {
+            var result = await response.Content.ReadAsStringAsync();
+            return Ok(result);
+        }
+        else
+        {
+            var errorResponse = await response.Content.ReadAsStringAsync();
+            return BadRequest($"Prediction failed. Python response: {errorResponse}");
+        }
+    }
+    catch (Exception ex)
+    {
+        return BadRequest($"Error posting prediction: {ex.Message}");
+    }
+}
+
             
     }
         

@@ -42,6 +42,8 @@ services:
       - "5020:8080"
     depends_on:
       - Sep4-DataProcessing-Service
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
     networks:
       - sep4-network
 

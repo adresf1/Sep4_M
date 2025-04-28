@@ -65,4 +65,37 @@ namespace API
         [JsonProperty("water_need_score")]
         public float WaterNeedScore { get; set; }
     }
+
+    public class PredictionInput
+{
+    [JsonProperty("TypeofModel")]
+    public string TypeofModel { get; set; }
+
+    [JsonProperty("NameOfModel")]
+    public string NameOfModel { get; set; }
+
+    [JsonProperty("Data")]
+    public PredictionData Data { get; set; }
+}
+
+public class PredictionData
+{
+    [JsonProperty("soil_type")]
+    public int SoilType { get; set; }
+
+    [JsonProperty("sunlight_hours")]
+    public int SunlightHours { get; set; }
+
+    [JsonProperty("water_frequency")]
+    public int WaterFrequency { get; set; }
+
+    [JsonProperty("fertilizer_type")]
+    public int FertilizerType { get; set; }
+
+    [JsonProperty("temperature")]
+    public int Temperature { get; set; }
+
+    [JsonProperty("humidity")]
+    public int Humidity { get; set; }
+}
 }
