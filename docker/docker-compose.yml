@@ -36,14 +36,16 @@ services:
       - "5020:8080"  # 
     depends_on:
       - Sep4-DataProcessing-Service
-
-  Sep4-ML_Service-Service:
+  Sep4-ML-Service:
     build:
-      context: ../APII
+      context: ../MLService
       dockerfile: Dockerfile
     image: sep4-dotnet-env
     container_name: ML_Service-container
     ports:
-      - "5030:8080"  # 
+      - "5030:8080"  # Maps port 5030 on the host to port 8080 in the container
     depends_on:
       - Sep4-ModelTraining-Service
+    environment:
+      - ASPNETCORE_URLS=http://+:8080  # Configure the app to listen on port 8080
+

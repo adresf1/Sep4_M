@@ -1,17 +1,18 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
-
 
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import math
 
 app = Flask(__name__)
+print("Starting app...")
 app.config['SQLALCHEMY_DATABASE_URI'] = ''
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+
+print("Db connection started...")
 
 class SensorData(db.Model):
     __tablename__ = 'sensor_data'
@@ -92,3 +93,5 @@ def post_sensor_data():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)

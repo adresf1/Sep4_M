@@ -15,7 +15,7 @@ namespace MLService.Controllers;
 public class PredictionController : ControllerBase
 {
     private readonly HttpClient _httpClient;
-    private readonly string _endpoint = "http://localhost:5000/";
+    private readonly string _endpoint = "http://localhost:5010/";
 
     public PredictionController(HttpClient httpClient)
     {
