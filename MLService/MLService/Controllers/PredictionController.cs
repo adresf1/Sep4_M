@@ -15,11 +15,16 @@ namespace MLService.Controllers;
 public class PredictionController : ControllerBase
 {
     private readonly HttpClient _httpClient;
-    private readonly string _endpoint = "http://localhost:5010/";
+    private readonly string _endpoint;
 
     public PredictionController(HttpClient httpClient)
     {
         _httpClient = httpClient;
+        // Check if we are running on docker and set URL accordingly
+        if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
+            _endpoint = "http://Sep4-API-Service:5000/";
+        else
+            _endpoint = "http://localhost:5010/";
     }
 
     //GET: prediction
