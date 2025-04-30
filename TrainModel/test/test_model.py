@@ -22,6 +22,7 @@ def test_train_no_json(client):
     # Send an empty body with Content-Type: application/json
     response = client.post('/train', data="", content_type="application/json")
     
+    #Added this comment to test pull request
     # Assert that the status code is 415 (Unsupported Media Type) if no body is provided
     #will return bad request(400) becuase the underlying python cant connect to database  
     assert response.status_code == 400  # 415 because empty JSON content is unsupported
