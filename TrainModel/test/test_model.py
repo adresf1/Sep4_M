@@ -9,12 +9,21 @@ def client():
         yield client
 
 def test_predict_missing_fields(client):
-    # Missing 'TypeofModel', 'NameOfModel', 'Data'
+    # Send an empty JSON payload with proper content-type
     response = client.post('/predict', json={})
+    
     assert response.status_code == 400
-    assert "Missing required top-level keys" in response.get_data(as_text=True)
+    response_data = response.get_json()
+    assert response_data is not None
+    assert "error" in response_data
+    assert "Missing required top-level keys" in response_data["error"]
 
 def test_train_no_json(client):
-    response = client.post('/train')
+    # Send an empty body with Content-Type: application/json
+    response = client.post('/train', data="", content_type="application/json")
+    
     assert response.status_code == 400
-    assert "No JSON data provided" in response.get_data(as_text=True)
+    response_data = response.get_json()
+    assert response_data is not None
+    assert "error" in response_data
+    assert "No JSON data provided" in response_data["error"]
