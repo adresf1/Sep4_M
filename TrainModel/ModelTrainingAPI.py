@@ -138,62 +138,55 @@ def rfc_predict():
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         return jsonify({"error": str(e), "ErrorInfo": str(exc_type) + str(fname) + str(exc_tb.tb_lineno)}), 500
 
-from sklearn.linear_model import LogisticRegression
-import joblib
-
 @app.route('/logistic_predict', methods=['POST'])
 def logistic_predict():
     try:
+        # Get the incoming JSON data
         payload = request.get_json(force=True)
 
-        # Check for required top-level keys
-        if not all(k in payload for k in ['TypeofModel', 'NameOfModel', 'Data']):
+        # Check for required keys in the payload
+        if not all(k in payload for k in ['ModelName', 'Data']):
             return jsonify({"error": "Missing required top-level keys"}), 400
 
-        model_type = payload['TypeofModel']
-        model_name = payload['NameOfModel']
+        model_name = payload['ModelName']
         data = payload['Data']
 
-        # If model is 'logistic_regression', validate data keys
-        if model_type.lower() == 'logistic_regression':
-            required_fields = {'soil_type', 'water_frequency', 'fertilizer_type'}  # Customize this as needed
-            missing_fields = required_fields - data.keys()
-            if missing_fields:
-                return jsonify({
-                    "error": f"Missing fields for 'logistic_regression' model: {', '.join(missing_fields)}"
-                }), 400
-
-        # Unpack and load the Logistic Regression model
+        # Load the trained Logistic Regression model using the unpack_model function
         model = unpack_model(model_name, "TrainedModels")
+
+        if model is None:
+            return jsonify({"error": "Model not found"}), 404
 
         # Prepare the data for prediction (one-hot encode categorical features)
         df = pd.DataFrame([data])
-        df_encoded = pd.get_dummies(df, columns=['soil_type', 'water_frequency', 'fertilizer_type'], drop_first=True)
 
-        # Align columns with the training data
-        missing_cols = set(df_encoded.columns) - set(X.columns)  # Compare with the training data
+        # One-hot encode the categorical features
+        df_encoded = pd.get_dummies(df, columns=['Soil_Type', 'Water_Frequency', 'Fertilizer_Type'], drop_first=True)
+
+        # Ensure the columns in df_encoded match the model's expected features
+        expected_columns = model.feature_names_in_  # Columns the model expects
+
+        # Add missing columns with 0 values if any
+        missing_cols = set(expected_columns) - set(df_encoded.columns)
         for c in missing_cols:
             df_encoded[c] = 0  # Add missing columns as 0
-        df_encoded = df_encoded[X.columns]  # Ensure column order matches the training data
 
-        # Make prediction
+        # Ensure the columns are in the same order as the model's training data
+        df_encoded = df_encoded[expected_columns]
+
+        # Make the prediction
         prediction = model.predict_proba(df_encoded)  # Get probability predictions
 
-        # Return result
+        # Return the prediction result
         return jsonify({
             "status": "success",
             "message": "Logistic Regression prediction completed successfully.",
-            "model_used": model_name,
             "result": prediction.tolist()[0]  # Convert to list for JSON serialization
         })
 
     except Exception as e:
-        print(str(e))
-        exc_type, exc_obj, exc_tb = sys.exc_info()
-        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-        return jsonify({"error": str(e), "ErrorInfo": str(exc_type) + str(fname) + str(exc_tb.tb_lineno)}), 500
+        return jsonify({"error": str(e)}), 500
 
-    
-# Run the Flask app
+
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
