@@ -141,52 +141,42 @@ def rfc_predict():
 @app.route('/logistic_predict', methods=['POST'])
 def logistic_predict():
     try:
-        # Get the incoming JSON data
         payload = request.get_json(force=True)
 
-        # Check for required keys in the payload
         if not all(k in payload for k in ['ModelName', 'Data']):
-            return jsonify({"error": "Missing required top-level keys"}), 400
+            return jsonify({"error": "Missing required keys 'ModelName' and 'Data'"}), 400
 
         model_name = payload['ModelName']
         data = payload['Data']
 
-        # Load the trained Logistic Regression model using the unpack_model function
-        model = unpack_model(model_name, "TrainedModels")
+        # Load the trained pipeline model (preprocessing + logistic regression)
+        model_path = os.path.join(os.getcwd(), "TrainedModels", model_name)
+        if not os.path.exists(model_path):
+            return jsonify({"error": f"Model file '{model_name}' not found in 'TrainedModels'"}), 404
 
-        if model is None:
-            return jsonify({"error": "Model not found"}), 404
+        pipeline_model = joblib.load(model_path)
 
-        # Prepare the data for prediction (one-hot encode categorical features)
-        df = pd.DataFrame([data])
+        # Wrap input data in a DataFrame with one row
+        df_input = pd.DataFrame([data])
 
-        # One-hot encode the categorical features
-        df_encoded = pd.get_dummies(df, columns=['Soil_Type', 'Water_Frequency', 'Fertilizer_Type'], drop_first=True)
+        # Predict using the pipeline
+        prediction = pipeline_model.predict(df_input)[0]
+        probability = pipeline_model.predict_proba(df_input).max()
 
-        # Ensure the columns in df_encoded match the model's expected features
-        expected_columns = model.feature_names_in_  # Columns the model expects
-
-        # Add missing columns with 0 values if any
-        missing_cols = set(expected_columns) - set(df_encoded.columns)
-        for c in missing_cols:
-            df_encoded[c] = 0  # Add missing columns as 0
-
-        # Ensure the columns are in the same order as the model's training data
-        df_encoded = df_encoded[expected_columns]
-
-        # Make the prediction
-        prediction = model.predict_proba(df_encoded)  # Get probability predictions
-
-        # Return the prediction result
         return jsonify({
             "status": "success",
             "message": "Logistic Regression prediction completed successfully.",
-            "result": prediction.tolist()[0]  # Convert to list for JSON serialization
-        })
+            "model_used": model_name,
+            "prediction": int(prediction),
+            "confidence": round(float(probability), 4)
+        }), 200
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+        import traceback
+        return jsonify({
+            "error": str(e),
+            "trace": traceback.format_exc()
+        }), 500
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
