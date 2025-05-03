@@ -1,10 +1,10 @@
-#!/usr/bin/env python 
+#!/usr/bin/env python
 # coding: utf-8
 
 import sys, os
 from flask import Flask, request, jsonify
 import pandas as pd
-from TrainRFCModel import train_RFC_model
+from TrainRFCModel import train_model
 from Predict import unpack_model, makePrediction, REQUIRED_FIELDS_RFC
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -71,7 +71,7 @@ def train():
         df = pd.DataFrame([plant.to_dict() for plant in data])
         
         # Train the RandomForest model
-        rfc, msg = train_RFC_model(targetMeasure=target_measure, trainningData=df, testSize=test_size, estimators=42, randomState=random_state)
+        rfc, msg = train_model(targetMeasure=target_measure, trainningData=df, testSize=test_size, estimators=42, randomState=random_state)
 
         # Save the trained RandomForest model to a binary file
         model_name = save_model_to_folder(rfc, model_name, "TrainedModels")
