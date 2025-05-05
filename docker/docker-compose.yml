@@ -11,6 +11,8 @@ services:
     volumes:
       - ../TrainModel/TrainedModels:/app/TrainModel/TrainedModels
     working_dir: /app/TrainModel
+    environment:
+      - PYTHONPATH=.
     command: python ModelTrainingAPI.py
     stdin_open: true
     tty: true
