@@ -10,7 +10,7 @@ def client():
 
 def test_predict_missing_fields(client):
     # Send an empty JSON payload with proper content-type
-    response = client.post('/predict', json={})
+    response = client.post('/rfc_predict', json={})
     
     assert response.status_code == 400
     response_data = response.get_json()
