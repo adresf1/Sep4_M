@@ -5,10 +5,13 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import math
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 app = Flask(__name__)
 print("Starting app...")
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://ujmpoinam3senrd9at7f:T66ndZSXpsASQnGR4Sl6@b4miactrrxbtqyg0obdl-postgresql.services.clever-cloud.com:50013/b4miactrrxbtqyg0obdl'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
