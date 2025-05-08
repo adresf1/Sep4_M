@@ -80,9 +80,13 @@ def train():
         if not table_name or not target_measure or not model_name:
             return jsonify({"error": "Missing required fields: 'table_name', 'model_name' and 'target_measure'"}), 400
 
-        DATABASE_URL = data.get('DATABASE_URL', os.getenv('DATABASE_URL'))
+        #DATABASE_URL = data.get('DATABASE_URL', os.getenv('DATABASE_URL'))
+        DATABASE_URL = os.getenv('DATABASE_URL')
+        if not DATABASE_URL:
+            return jsonify({"error": "DATABASE_URL not provided and not found in environment variables."}), 400
+        
+        
         PlantModel = get_model_for_table(table_name, DATABASE_URL)
-
         engine = create_engine(DATABASE_URL)
         Session = sessionmaker(bind=engine)
         session = Session()
