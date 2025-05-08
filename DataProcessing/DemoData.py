@@ -18,3 +18,134 @@ def create_plant_model(table_name):
         growth_milestone = Column(Integer)
 
     return Plant
+
+def create_preprocessed_plant_model(table_name):
+    class PlantPreprocessed(Base):
+        __tablename__ = table_name
+        __table_args__ = {'extend_existing': True}
+
+        id = Column(Integer, primary_key=True, autoincrement=True)
+
+        # One-hot encoded soil types
+        soil_loam = Column(Boolean, default=False)
+        soil_clay = Column(Boolean, default=False)
+        soil_sandy = Column(Boolean, default=False)
+
+        # One-hot encoded water frequencies
+        water_bi_weekly = Column(Boolean, default=False)
+        water_daily = Column(Boolean, default=False)
+        water_weekly = Column(Boolean, default=False)
+
+        # One-hot encoded fertilizer types
+        fertilizer_chemical = Column(Boolean, default=False)
+        fertilizer_none = Column(Boolean, default=False)
+        fertilizer_organic = Column(Boolean, default=False)
+
+        # Original numeric fields
+        sunlight_hours = Column(Float)
+        temperature = Column(Float)
+        humidity = Column(Float)
+
+        # Quadratic Calculated Columns fields
+        sunlight_hours_quadratic = Column(Float)
+        temperature_quadratic = Column(Float)
+        humidity_quadratic = Column(Float)
+
+        # Growth milestone
+        growth_milestone = Column(Integer)
+
+    return PlantPreprocessed
+
+def calculate_column_averages(db, model, column_names):
+    session = db.session
+    try:
+        averages = {}
+
+        for col_name in column_names:
+            col = getattr(model, col_name)
+            values = session.query(col).filter(model.growth_milestone == 1).all()
+            clean_values = [v[0] for v in values if v[0] is not None]
+
+            if clean_values:
+                avg = sum(clean_values) / len(clean_values)
+                averages[col_name] = avg
+            else:
+                averages[col_name] = None  # Or raise exception if preferred
+
+        return averages
+
+    except Exception as e:
+        raise RuntimeError(f"Error calculating column averages: {e}")
+    
+def one_hot_encode_columns(raw):
+    # Default values for all the one-hot encoded columns (false by default)
+    encoded = {
+        "soil_loam": False,
+        "soil_clay": False,
+        "soil_sandy": False,
+        "water_bi_weekly": False,
+        "water_daily": False,
+        "water_weekly": False,
+        "fertilizer_chemical": False,
+        "fertilizer_none": False,
+        "fertilizer_organic": False
+    }
+
+    # Set the appropriate one-hot encoding for each field
+    # Could this be improved with some enumerations definition
+    if raw.soil_type == "loam":
+        encoded["soil_loam"] = True
+    elif raw.soil_type == "clay":
+        encoded["soil_clay"] = True
+    elif raw.soil_type == "sandy":
+        encoded["soil_sandy"] = True
+
+    if raw.water_frequency == "bi-weekly":
+        encoded["water_bi_weekly"] = True
+    elif raw.water_frequency == "daily":
+        encoded["water_daily"] = True
+    elif raw.water_frequency == "weekly":
+        encoded["water_weekly"] = True
+
+    if raw.fertilizer_type == "chemical":
+        encoded["fertilizer_chemical"] = True
+    elif raw.fertilizer_type == "none":
+        encoded["fertilizer_none"] = True
+    elif raw.fertilizer_type == "organic":
+        encoded["fertilizer_organic"] = True
+
+    return encoded
+
+def copy_to_preprocessed(original_row, encoded_values, averages, db, PlantPreprocessed):
+    # Create new preprocessed record
+    preprocessed_row = PlantPreprocessed(
+        soil_loam=encoded_values["soil_loam"],
+        soil_clay=encoded_values["soil_clay"],
+        soil_sandy=encoded_values["soil_sandy"],
+        water_bi_weekly=encoded_values["water_bi_weekly"],
+        water_daily=encoded_values["water_daily"],
+        water_weekly=encoded_values["water_weekly"],
+        fertilizer_chemical=encoded_values["fertilizer_chemical"],
+        fertilizer_none=encoded_values["fertilizer_none"],
+        fertilizer_organic=encoded_values["fertilizer_organic"],
+        
+        # Copy the original numeric fields
+        sunlight_hours=original_row.sunlight_hours,
+        temperature=original_row.temperature,
+        humidity=original_row.humidity,
+        
+        # Copy the growth milestone
+        growth_milestone=original_row.growth_milestone
+    )
+
+    # Quadratic Calculations using the pre-calculated averages
+    if averages:
+        preprocessed_row.sunlight_hours_quadratic = (original_row.sunlight_hours - averages['sunlight_hours']) ** 2
+        preprocessed_row.temperature_quadratic = (original_row.temperature - averages['temperature']) ** 2
+        preprocessed_row.humidity_quadratic = (original_row.humidity - averages['humidity']) ** 2
+
+    # Add to the session and commit
+    db.session.add(preprocessed_row)
+    db.session.commit()
+
+    return preprocessed_row

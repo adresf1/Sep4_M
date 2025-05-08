@@ -9,7 +9,8 @@ import math
 import os
 from dotenv import load_dotenv
 load_dotenv()
-from DemoData import create_plant_model
+from DemoData import create_plant_model, calculate_column_averages, create_preprocessed_plant_model, one_hot_encode_columns, copy_to_preprocessed
+from sqlalchemy import distinct
 
 app = Flask(__name__)
 print("Starting app...")
@@ -205,6 +206,71 @@ def delete_plant_data(id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+@app.route('/DemoDataRaw/unique-values', methods=['GET'])
+def get_unique_plant_data_fields():
+    try:
+        PlantDataTest = create_plant_model('plant_data_test')
+
+        unique_soil_types = [row[0] for row in db.session.query(distinct(PlantDataTest.soil_type)).all()]
+        unique_water_freqs = [row[0] for row in db.session.query(distinct(PlantDataTest.water_frequency)).all()]
+        unique_fertilizers = [row[0] for row in db.session.query(distinct(PlantDataTest.fertilizer_type)).all()]
+
+        return jsonify({
+            "soil_types": unique_soil_types,
+            "water_frequencies": unique_water_freqs,
+            "fertilizer_types": unique_fertilizers
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/preprocess', methods=['POST'])
+def preprocess_data():
+    try:
+        payload = request.get_json()
+
+        copy_from = payload.get('CopyFrom')
+        copy_to = payload.get('CopyTo')
+
+        if not copy_from or not copy_to:
+            return jsonify({'error': 'Both CopyFrom and CopyTo table names must be provided.'}), 400
+
+        # Dynamically create models from table names
+        PlantModel = create_plant_model(copy_from)
+        PlantPreprocessed = create_preprocessed_plant_model(copy_to)
+        
+        #Check if tables exist
+        PlantModel.__table__.create(db.engine, checkfirst=True)
+        PlantPreprocessed.__table__.create(db.engine, checkfirst=True)
+
+
+        # Fetch all rows from the source table
+        original_data = db.session.query(PlantModel).all()
+
+        if not original_data:
+            return jsonify({'message': 'No records found in source table.', 'records_transferred': 0}), 200
+
+        # Calculate column averages once
+        averages = calculate_column_averages(db, PlantModel, ['sunlight_hours', 'temperature', 'humidity'])
+
+        transferred_count = 0
+
+        for row in original_data:
+            encoded_values = one_hot_encode_columns(row)
+            copy_to_preprocessed(row, encoded_values, averages, db, PlantPreprocessed)
+            transferred_count += 1
+
+        return jsonify({
+            "message": "Data successfully piped.",
+            "records_transferred": transferred_count,
+            "copied_from": copy_from,
+            "copied_to": copy_to,
+            "averages": averages
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
