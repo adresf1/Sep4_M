@@ -81,35 +81,48 @@ def test_save_model_to_folder_creates_file(tmp_path, monkeypatch):
     assert filename.endswith(".joblib")
 
 def test_unpack_model_loads_correct_file(tmp_path, monkeypatch):
+    # 1) Opret TrainedModels folder + dummy-fil
     folder = tmp_path / "TrainedModels"
     folder.mkdir()
     dummy = folder / "bar.joblib"
     dummy.write_bytes(b"")
 
-    called = {}
+    # 2) Stub Predict.load — fang stien og returnér "OK"
     import Predict
-    monkeypatch.setattr(Predict, 'load', lambda p: called.setdefault('path', p) or "OK")
+    called = {}
+    def fake_load(path):
+        called['path'] = path
+        return "OK"
+    monkeypatch.setattr(Predict, 'load', fake_load)
 
+    # 3) Kald unpack_model
+    from Predict import unpack_model
     result = unpack_model("bar.joblib", str(folder))
+
+    # 4) Assert
     assert result == "OK"
-    assert called['path'].endswith("TrainedModels/bar.joblib")
+    assert called['path'].endswith("/TrainedModels/bar.joblib")
 
 def test_get_model_for_table_caches(monkeypatch):
     import ModelTrainingAPI
+
     calls = []
-    monkeypatch.setattr(
-        'ModelTrainingAPI.create_plant_data_class',
-        lambda name: calls.append(name) or dict,
-        raising=False
-    )
-    # Stub create_engine så den ikke fejler
-    monkeypatch.setattr('ModelTrainingAPI.create_engine', lambda url: object())
-    monkeypatch.setattr('ModelTrainingAPI.sessionmaker', lambda b: object())
+    # Returnér en ny klasse per table_name
+    def fake_create(name):
+        calls.append(name)
+        return type(f"Plant_{name}", (), {})  # unik klasse for hver name
+
+    monkeypatch.setattr(ModelTrainingAPI, 'create_plant_data_class', fake_create, raising=False)
+
+    # Stub create_engine og sessionmaker så det ikke fejler
+    monkeypatch.setattr(ModelTrainingAPI, 'create_engine', lambda url: object())
+    monkeypatch.setattr(ModelTrainingAPI, 'sessionmaker', lambda *args, **kwargs: object())
 
     m1 = ModelTrainingAPI.get_model_for_table("A", "url")
     m2 = ModelTrainingAPI.get_model_for_table("A", "url")
     m3 = ModelTrainingAPI.get_model_for_table("B", "url")
 
+    # Kald kun på første A og første B
     assert calls == ["A", "B"]
     assert m1 is m2
     assert m3 is not m1
@@ -119,8 +132,10 @@ def test_get_model_for_table_caches(monkeypatch):
 def test_train_no_json(client):
     resp = client.post('/train', data='', content_type='application/json')
     assert resp.status_code == 400
-    body = resp.get_json()
-    assert body["error"] == "No JSON data provided"
+
+    data = resp.get_json(silent=True)
+    assert data is not None, "Forventede JSON‐fejlbesked, ikke HTML‐side"
+    assert data["error"] == "No JSON data provided"
 
 @pytest.mark.parametrize('missing', ['model_name','table_name','target_measure'])
 def test_train_missing_fields(client, missing):
@@ -139,21 +154,32 @@ def test_train_missing_fields(client, missing):
     assert "Missing required fields" in resp.get_json()["error"]
 
 def test_train_no_data_found(client, monkeypatch):
-    # 1) Stub session.query().all() → tom liste
+    # Definér en Dummy-session-klasse
     class EmptySession:
-        def query(self, m): return type('Q',(),{'all':lambda _: []})()
+        def __init__(self): pass
+        def query(self, m):
+            return type('Q', (), {'all': lambda self: []})()
         def close(self): pass
-    monkeypatch.setattr('ModelTrainingAPI.sessionmaker', lambda b: EmptySession())
+
+    # Stub sessionmaker → returnér klassen (ikke en instans)
+    monkeypatch.setattr(
+        'ModelTrainingAPI.sessionmaker',
+        lambda bind=None, **kw: EmptySession,
+        raising=True
+    )
 
     payload = {
-        'model_name': 'm',
-        'table_name': 't',
+        'model_name':     'm',
+        'table_name':     't',
         'target_measure': 'y',
-        'db_url': 'sqlite:///:memory:'
+        'db_url':         'sqlite:///:memory:'
     }
     resp = client.post('/train', json=payload)
+
     assert resp.status_code == 404
-    assert "No data found for table" in resp.get_json()["error"]
+    data = resp.get_json()
+    assert "No data found for table 't'" in data["error"]
+
 
 
 #def test_predict_missing_fields(client):
