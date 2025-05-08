@@ -41,11 +41,12 @@ def get_model_for_table(table_name, DATABASE_URL):
 @app.route('/train', methods=['POST'])
 def train():
     # Get the incoming JSON data from the request
-    data = request.get_json()
+    data = request.get_json(silent=True)
 
     if not data:
         return jsonify({"error": "No JSON data provided"}), 400
-
+    
+    session = None #Session bliver oprettet i try-blokken
     try:
         model_name = data.get('model_name')
         table_name = data.get('table_name')
@@ -95,7 +96,8 @@ def train():
         return jsonify({"error": f"Failed to process request: {str(e)}"}), 500
 
     finally:
-        session.close()
+        if session is not None:
+            session.close()
 
 # API endpoint for RandomForest predictions
 @app.route('/rfc_predict', methods=['POST'])

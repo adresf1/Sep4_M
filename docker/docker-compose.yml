@@ -9,7 +9,8 @@ services:
     image: sep4-modeltraining-env
     container_name: Model-Training-Container
     volumes:
-      - ../TrainModel/TrainedModels:/app/TrainModel/TrainedModels
+        - ../TrainModel:/app/TrainModel
+        - ../TrainModel/TrainedModels:/app/TrainModel/TrainedModels
     working_dir: /app/TrainModel
     environment:
       - PYTHONPATH=.
