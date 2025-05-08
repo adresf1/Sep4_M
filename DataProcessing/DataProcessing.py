@@ -4,10 +4,12 @@
 
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import scoped_session, sessionmaker
 import math
 import os
 from dotenv import load_dotenv
 load_dotenv()
+from DemoData import create_plant_model
 
 app = Flask(__name__)
 print("Starting app...")
@@ -131,6 +133,78 @@ def fetch_sensor_data():
         return jsonify(results), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/DemoDataRaw', methods=['GET'])
+def get_plant_data():
+    try:
+        PlantDataTest = create_plant_model('plant_data_test')
+        data = db.session.query(PlantDataTest).all()
+        results = []
+
+        for d in data:
+            results.append({
+                "id": d.id,
+                "soil_type": d.soil_type,
+                "sunlight_hours": d.sunlight_hours,
+                "water_frequency": d.water_frequency,
+                "fertilizer_type": d.fertilizer_type,
+                "temperature": d.temperature,
+                "humidity": d.humidity,
+                "Growth_Milestone": d.growth_milestone
+            })
+
+        return jsonify(results), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/DemoDataRaw', methods=['POST'])
+def add_plant_data():
+    try:
+        PlantDataTest = create_plant_model('plant_data_test')
+        data = request.get_json()
+
+        new_entry = PlantDataTest(
+            soil_type=data['soil_type'],
+            sunlight_hours=data['sunlight_hours'],
+            water_frequency=data['water_frequency'],
+            fertilizer_type=data['fertilizer_type'],
+            temperature=data['temperature'],
+            humidity=data['humidity'],
+            growth_milestone=data['growth_milestone']
+        )
+
+        db.session.add(new_entry)
+        db.session.commit()
+
+        return jsonify({
+            "message": "Data added successfully!",
+            "entry_id": new_entry.id
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/DemoDataRaw/<int:id>', methods=['DELETE'])
+def delete_plant_data(id):
+    try:
+        PlantDataTest = create_plant_model('plant_data_test')
+        
+        # Find the entry by ID
+        entry = db.session.get(PlantDataTest, id)
+
+        if entry is None:
+            return jsonify({'error': f'Entry with id {id} not found'}), 404
+
+        db.session.delete(entry)
+        db.session.commit()
+
+        return jsonify({'message': f'Entry with id {id} deleted successfully'}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
