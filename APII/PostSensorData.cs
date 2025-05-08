@@ -59,3 +59,5 @@ public class PostSensorData
     public string FertilizerType { get; set; }
 
 }
+
+
