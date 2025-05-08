@@ -22,14 +22,14 @@ class DummyModel:
 def client(monkeypatch):
     app.config['TESTING'] = True
 
-    # Stub create_plant_data_class → DummyPlant
+    # Stub create_plant_data_class to DummyPlant
     monkeypatch.setattr(
         'ModelTrainingAPI.create_plant_data_class',
         lambda table_name: DummyPlant,
         raising=False
     )
 
-    # Stub sessionmaker → tom liste
+    # Stub sessionmaker to tilm liste
     class FakeSession:
         def __init__(self, items): self._items = items
         def query(self, model):   return type('Q', (), {'all': lambda s: self._items})()
@@ -40,10 +40,10 @@ def client(monkeypatch):
         lambda bind: FakeSession([DummyPlant({'a':1,'b':2})])
     )
 
-    # Stub train_model → DummyModel + metrics
+    # Stub train_model til DummyModel + metrics
     monkeypatch.setattr(
         'ModelTrainingAPI.train_model',
-        lambda targetMeasure, trainningData, testSize, estimators, randomState:
+        lambda targetMeasure, trainningData, testSize, estimatilrs, randomState:
             (DummyModel([0.1, 0.9]), {'accuracy': 0.9})
     )
 
@@ -161,7 +161,7 @@ def test_train_no_data_found(client, monkeypatch):
             return type('Q', (), {'all': lambda self: []})()
         def close(self): pass
 
-    # Stub sessionmaker → returnér klassen (ikke en instans)
+    # Stub sessionmaker ti at returnér klassen (ikke en instans)
     monkeypatch.setattr(
         'ModelTrainingAPI.sessionmaker',
         lambda bind=None, **kw: EmptySession,
