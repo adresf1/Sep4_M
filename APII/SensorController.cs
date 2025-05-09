@@ -40,7 +40,7 @@ using Newtonsoft.Json;
             }
         }
 
-        // POST: api/sensors
+        // POST: api/Sensor
         [HttpPost]
         public async Task<ActionResult<string>> PostSensorData([FromBody] PostSensorData sensorData)
         {
