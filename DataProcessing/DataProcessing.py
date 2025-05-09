@@ -135,6 +135,36 @@ def fetch_sensor_data():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+#======================== DemoData Endpoints, CRUD  ===========================
+@app.route('/DemoDataRaw/<int:id>', methods=['GET'])
+def get_single_plant_data(id):
+    try:
+        if id < 1:
+            return jsonify({'error': 'Invalid ID'}), 400
+
+        PlantDataTest = create_plant_model('plant_data_test')
+        entry = db.session.get(PlantDataTest, id)
+
+        if entry is None:
+            return jsonify({'error': f'Entry with id {id} not found'}), 404
+
+        result = {
+            "id": entry.id,
+            "soil_type": entry.soil_type,
+            "sunlight_hours": entry.sunlight_hours,
+            "water_frequency": entry.water_frequency,
+            "fertilizer_type": entry.fertilizer_type,
+            "temperature": entry.temperature,
+            "humidity": entry.humidity,
+            "Growth_Milestone": entry.growth_milestone
+        }
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/DemoDataRaw', methods=['GET'])
 def get_plant_data():
     try:
@@ -186,6 +216,63 @@ def add_plant_data():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+
+@app.route('/DemoDataRaw/<int:id>', methods=['POST'])
+def update_plant_data(id):
+    try:
+        # Validate ID
+        if id < 1:
+            return jsonify({'error': 'Invalid ID'}), 400
+
+        PlantDataTest = create_plant_model('plant_data_test')
+        data = request.get_json()
+
+        # Strict type validation (excluding bools for numeric fields)
+        if 'soil_type' in data and not isinstance(data['soil_type'], str):
+            return jsonify({'error': 'Invalid data type for soil_type'}), 400
+        if 'sunlight_hours' in data and (
+            not isinstance(data['sunlight_hours'], (int, float)) or isinstance(data['sunlight_hours'], bool)
+        ):
+            return jsonify({'error': 'Invalid data type for sunlight_hours'}), 400
+        if 'water_frequency' in data and not isinstance(data['water_frequency'], str):
+            return jsonify({'error': 'Invalid data type for water_frequency'}), 400
+        if 'fertilizer_type' in data and not isinstance(data['fertilizer_type'], str):
+            return jsonify({'error': 'Invalid data type for fertilizer_type'}), 400
+        if 'temperature' in data and (
+            not isinstance(data['temperature'], (int, float)) or isinstance(data['temperature'], bool)
+        ):
+            return jsonify({'error': 'Invalid data type for temperature'}), 400
+        if 'humidity' in data and (
+            not isinstance(data['humidity'], (int, float)) or isinstance(data['humidity'], bool)
+        ):
+            return jsonify({'error': 'Invalid data type for humidity'}), 400
+        if 'growth_milestone' in data and (
+            not isinstance(data['growth_milestone'], int) or isinstance(data['growth_milestone'], bool)
+        ):
+            return jsonify({'error': 'Invalid data type for growth_milestone'}), 400
+
+        # Fetch the entry by ID
+        entry = db.session.get(PlantDataTest, id)
+        if entry is None:
+            return jsonify({'error': f'Entry with id {id} not found'}), 404
+
+        # Update fields
+        entry.soil_type = data.get('soil_type', entry.soil_type)
+        entry.sunlight_hours = data.get('sunlight_hours', entry.sunlight_hours)
+        entry.water_frequency = data.get('water_frequency', entry.water_frequency)
+        entry.fertilizer_type = data.get('fertilizer_type', entry.fertilizer_type)
+        entry.temperature = data.get('temperature', entry.temperature)
+        entry.humidity = data.get('humidity', entry.humidity)
+        entry.growth_milestone = data.get('growth_milestone', entry.growth_milestone)
+
+        db.session.commit()
+        return jsonify({'message': f'Entry with id {id} updated successfully'}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/DemoDataRaw/<int:id>', methods=['DELETE'])
 def delete_plant_data(id):
     try:
@@ -223,6 +310,9 @@ def get_unique_plant_data_fields():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+#======================== Preprocess Endpoint  ===========================
 
 
 @app.route('/preprocess', methods=['POST'])
