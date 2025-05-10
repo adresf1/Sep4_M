@@ -15,17 +15,15 @@ namespace MLService.Controllers;
 public class PredictionController : ControllerBase
 {
     private readonly HttpClient _httpClient;
-    private readonly string _endpoint;
+    private readonly string _endpoint = "http://Sep4-ModelTraining-Service:5000/";
 
     public PredictionController(HttpClient httpClient)
     {
         _httpClient = httpClient;
-        // Check if we are running on docker and set URL accordingly
-        if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
-            _endpoint = "http://Sep4-API-Service:5000/";
-        else
-            _endpoint = "http://localhost:5010/";
+      
     }
+    
+   
 
     //GET: prediction
     [HttpGet]
@@ -42,7 +40,7 @@ public class PredictionController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<string>> Predict([FromBody] PredictionRequest data)
     {
-        string endpoint = _endpoint + "predict";
+        string endpoint = _endpoint + "rfc_predict";
         
         string payload = JsonConvert.SerializeObject(data);
         
@@ -61,4 +59,21 @@ public class PredictionController : ControllerBase
             return error;
         }
     }
+    
+    [HttpPost("logistic")]
+public async Task<ActionResult<string>> PredictLogistic([FromBody] LogisticPredictionRequest data)
+{
+    string endpoint = _endpoint + "logistic_predict";
+    var content = new StringContent(JsonConvert.SerializeObject(data), System.Text.Encoding.UTF8, "application/json");
+    var response = await _httpClient.PostAsync(endpoint, content);
+
+    if (response.IsSuccessStatusCode)
+        return await response.Content.ReadAsStringAsync();
+    else
+    {
+        string error = $"{response.StatusCode}: Failed to request Logistic prediction: {await response.Content.ReadAsStringAsync()}";
+        Console.WriteLine(error);
+        return error;
+    }
+}
 }
