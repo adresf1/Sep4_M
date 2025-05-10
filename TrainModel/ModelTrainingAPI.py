@@ -154,6 +154,18 @@ def logistic_predict():
         model_name = payload['ModelName']
         data = payload['Data']
 
+        # Check if required fields are missing
+        if 'Humidity' not in data or data['Humidity'] == "":
+            return jsonify({"error": "Humidity value is missing"}), 400
+
+        # Handle outliers
+        if not (1 <= data['Sunlight_Hours'] <= 24):
+            return jsonify({"error": "Sunlight_Hours must be between 1 and 24 hours"}), 400
+        if not (0 <= data['Temperature'] <= 50):
+            return jsonify({"error": "Temperature must be between 0 and 50°C"}), 400
+        if not (10 <= data['Humidity'] <= 100):
+            return jsonify({"error": "Humidity must be between 10% and 100%"}), 400
+
         # Load the trained pipeline model (preprocessing + logistic regression)
         model_path = os.path.join(os.getcwd(), "TrainedModels", model_name)
         if not os.path.exists(model_path):
