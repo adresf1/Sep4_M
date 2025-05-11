@@ -124,6 +124,15 @@ def predict():
                     "error": f"Missing fields for Random Forest model: {', '.join(missing_fields)}"
                 }), 400
 
+            # Grænseværdi-validering for RFC
+            
+            if not (1 <= data['sunlight_hours'] <= 24):
+                return jsonify({"error": "Sunlight_Hours must be between 1 and 24"}), 400
+            if not (0 <= data['temperature'] <= 50):
+                return jsonify({"error": "Temperature must be between 0 and 50"}), 400
+            if not (10 <= data['humidity'] <= 100):
+                return jsonify({"error": "Humidity must be between 10 and 100"}), 400
+
             model = unpack_model(model_name, "TrainedModels")
             result = makePrediction(model, data)
 
@@ -170,6 +179,7 @@ def predict():
             "error": str(e),
             "trace": traceback.format_exc()
         }), 500
+
 
 
 if __name__ == "__main__":
