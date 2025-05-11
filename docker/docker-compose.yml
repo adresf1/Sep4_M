@@ -31,6 +31,8 @@ services:
     command: python DataProcessing.py
     stdin_open: true
     tty: true
+    environment:
+      - SQLALCHEMY_DATABASE_URI=${SQLALCHEMY_DATABASE_URI}    
     networks:
       - sep4-network
 
