@@ -15,7 +15,12 @@ from sqlalchemy import distinct
 app = Flask(__name__)
 print("Starting app...")
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
-print("Database URL:", app.config['SQLALCHEMY_DATABASE_URI'])
+if not database_url:
+    print("ERROR: DATABASE_URL is not set.")
+else:
+    print("Database URL:", database_url)
+    
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
