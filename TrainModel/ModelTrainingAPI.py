@@ -2,7 +2,8 @@
 # coding: utf-8
 
 import sys, os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, abort
+from werkzeug.exceptions import HTTPException
 import pandas as pd
 from TrainRFCModel import train_model
 from Predict import unpack_model, makePrediction, REQUIRED_FIELDS_RFC
@@ -94,8 +95,7 @@ def train():
         # Query all data from the table
         data = session.query(PlantModel).all()
         if not data:
-            return jsonify({"error": f"No data found for table '{table_name}'"}), 404
-
+            return jsonify({"error":f"No data found in the table. '{table_name}'."}), 404
         # Convert the queried data to a DataFrame
         df = pd.DataFrame([plant.to_dict() for plant in data])
         
@@ -114,6 +114,9 @@ def train():
         }
 
         return jsonify(response), 200
+
+    except HTTPException: 
+        raise
 
     except Exception as e:
         print(str(e))
