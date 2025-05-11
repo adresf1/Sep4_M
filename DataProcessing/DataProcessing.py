@@ -15,7 +15,8 @@ from sqlalchemy import distinct
 app = Flask(__name__)
 print("Starting app...")
 # Use DATABASE_URL from .env or GitHub Actions, fallback if needed
-db_url = os.getenv('DATABASE_URL') or os.getenv('SQLALCHEMY_DATABASE_URI')
+#db_url = os.getenv('DATABASE_URL') or os.getenv('SQLALCHEMY_DATABASE_URI')
+db_url = os.environ["DATABASE_URL"]
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 if not db_url:
