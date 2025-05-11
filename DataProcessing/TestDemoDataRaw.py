@@ -2,12 +2,14 @@ import pytest
 from unittest.mock import patch, MagicMock
 from DataProcessing import app
 
-
+print("Starting pytest.fixture.....")
 @pytest.fixture
 def client():
     app.config['TESTING'] = True
     with app.test_client() as client:
         yield client
+
+print("Starting Tests.....")
 
 #================================== Get all function test ==================================
 #Test Zero case with 
