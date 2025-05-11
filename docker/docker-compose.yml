@@ -34,7 +34,7 @@ services:
     stdin_open: true
     tty: true
     environment:
-      - SQLALCHEMY_DATABASE_URI=${DATABASE_URL}
+      - DATABASE_URL=${DATABASE_URL}
     networks:
       - sep4-network
 

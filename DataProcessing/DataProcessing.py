@@ -14,11 +14,14 @@ from sqlalchemy import distinct
 
 app = Flask(__name__)
 print("Starting app...")
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+# Use DATABASE_URL from .env or GitHub Actions, fallback if needed
+db_url = os.getenv('SQLALCHEMY_DATABASE_URI') or os.getenv('DATABASE_URL')
+
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 if not database_url:
     print("ERROR: DATABASE_URL is not set.")
 else:
-    print("Database URL:", database_url)
+    print("Database URL:", db_url)
     
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
