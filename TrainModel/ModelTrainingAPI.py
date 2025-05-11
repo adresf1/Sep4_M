@@ -102,79 +102,67 @@ def train():
         if session is not None:
             session.close()
 
-# API endpoint for RandomForest predictions
-@app.route('/rfc_predict', methods=['POST'])
-def rfc_predict():
+@app.route('/predict', methods=['POST'])
+def predict():
     try:
         payload = request.get_json(force=True)
 
-        # Check for required top-level keys
-        if not all(k in payload for k in ['TypeofModel', 'NameOfModel', 'Data']):
-            return jsonify({"error": "Missing required top-level keys"}), 400
+        # Identifikation af modeltype
+        model_type = payload.get('TypeofModel') or 'logistic_regression'
+        model_name = payload.get('NameOfModel') or payload.get('ModelName')
+        data = payload.get('Data')
 
-        model_type = payload['TypeofModel']
-        model_name = payload['NameOfModel']
-        data = payload['Data']
+        if not model_name or not data:
+            return jsonify({"error": "Missing 'ModelName' or 'Data'"}), 400
 
-        # If model is 'random_forest', validate data keys
-        if model_type.lower() == 'random_forest':
-            missing_fields = REQUIRED_FIELDS_RFC - data.keys()  # Adjust fields for RandomForest
+        # RFC logik
+        if model_type.lower() in ['rfc', 'random_forest']:
+            # Valider påkrævede felter
+            missing_fields = REQUIRED_FIELDS_RFC - data.keys()
             if missing_fields:
                 return jsonify({
-                    "error": f"Missing fields for 'random_forest' model: {', '.join(missing_fields)}"
+                    "error": f"Missing fields for Random Forest model: {', '.join(missing_fields)}"
                 }), 400
 
-        # Unpack and load the RandomForest model
-        model = unpack_model(model_name, "TrainedModels")
-        
-        # Make prediction
-        result = makePrediction(model, data)
-        
-        return jsonify({
-            "status": "success",
-            "message": "Random Forest prediction completed successfully.",
-            "model_used": model_name,
-            "result": result  # Return result
-        })
+            model = unpack_model(model_name, "TrainedModels")
+            result = makePrediction(model, data)
 
-    except Exception as e:
-        print(str(e))
-        exc_type, exc_obj, exc_tb = sys.exc_info()
-        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-        return jsonify({"error": str(e), "ErrorInfo": str(exc_type) + str(fname) + str(exc_tb.tb_lineno)}), 500
+            return jsonify({
+                "status": "success",
+                "message": "Random Forest prediction completed successfully.",
+                "model_used": model_name,
+                "result": result
+            }), 200
 
-@app.route('/logistic_predict', methods=['POST'])
-def logistic_predict():
-    try:
-        payload = request.get_json(force=True)
+        # Logistic Regression logik
+        elif model_type.lower() in ['logistic', 'logistic_regression']:
+            if not (1 <= data['Sunlight_Hours'] <= 24):
+                return jsonify({"error": "Sunlight_Hours must be between 1 and 24"}), 400
+            if not (0 <= data['Temperature'] <= 50):
+                return jsonify({"error": "Temperature must be between 0 and 50"}), 400
+            if not (10 <= data['Humidity'] <= 100):
+                return jsonify({"error": "Humidity must be between 10 and 100"}), 400
 
-        if not all(k in payload for k in ['ModelName', 'Data']):
-            return jsonify({"error": "Missing required keys 'ModelName' and 'Data'"}), 400
+            model_path = os.path.join(os.getcwd(), "TrainedModels", model_name)
+            if not os.path.exists(model_path):
+                return jsonify({"error": f"Model '{model_name}' not found in TrainedModels"}), 404
 
-        model_name = payload['ModelName']
-        data = payload['Data']
+            pipeline_model = joblib.load(model_path)
+            df_input = pd.DataFrame([data])
 
-        # Load the trained pipeline model (preprocessing + logistic regression)
-        model_path = os.path.join(os.getcwd(), "TrainedModels", model_name)
-        if not os.path.exists(model_path):
-            return jsonify({"error": f"Model file '{model_name}' not found in 'TrainedModels'"}), 404
+            prediction = pipeline_model.predict(df_input)[0]
+            probability = pipeline_model.predict_proba(df_input).max()
 
-        pipeline_model = joblib.load(model_path)
+            return jsonify({
+                "status": "success",
+                "message": "Logistic Regression prediction completed successfully.",
+                "model_used": model_name,
+                "prediction": int(prediction),
+                "confidence": round(float(probability), 4)
+            }), 200
 
-        # Wrap input data in a DataFrame with one row
-        df_input = pd.DataFrame([data])
-
-        # Predict using the pipeline
-        prediction = pipeline_model.predict(df_input)[0]
-        probability = pipeline_model.predict_proba(df_input).max()
-
-        return jsonify({
-            "status": "success",
-            "message": "Logistic Regression prediction completed successfully.",
-            "model_used": model_name,
-            "prediction": int(prediction),
-            "confidence": round(float(probability), 4)
-        }), 200
+        else:
+            return jsonify({"error": f"Unsupported model type '{model_type}'"}), 400
 
     except Exception as e:
         import traceback
@@ -182,6 +170,7 @@ def logistic_predict():
             "error": str(e),
             "trace": traceback.format_exc()
         }), 500
+
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
