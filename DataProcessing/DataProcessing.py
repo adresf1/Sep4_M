@@ -18,7 +18,6 @@ print("Starting app...")
 #db_url = os.getenv('DATABASE_URL') or os.getenv('SQLALCHEMY_DATABASE_URI')
 db_url = os.environ["DATABASE_URL"]
 
-app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 if not db_url:
     print("ERROR: DATABASE_URL is not set.")
 else:
