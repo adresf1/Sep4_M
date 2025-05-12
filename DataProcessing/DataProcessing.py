@@ -47,7 +47,6 @@ class SensorData(db.Model):
 with app.app_context():
     db.create_all()
 
-
 @app.route('/fetch-sensor-data', methods=['POST'])
 def post_sensor_data():
     try:
