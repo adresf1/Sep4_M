@@ -13,7 +13,7 @@ public class PredictionData
     {
         
     }
-    
+
     public PredictionData(int soil_type, double sunlight_hours, int water_frequency, int fertilizer_type, double temperature, double humidity)
     {
         this.soil_type = soil_type;
@@ -23,5 +23,5 @@ public class PredictionData
         this.temperature = temperature;
         this.humidity = humidity;
     }
-    
+
 }
