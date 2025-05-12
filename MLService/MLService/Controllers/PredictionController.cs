@@ -6,8 +6,10 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace MLService.Controllers;
 
@@ -15,17 +17,15 @@ namespace MLService.Controllers;
 public class PredictionController : ControllerBase
 {
     private readonly HttpClient _httpClient;
-    private readonly string _endpoint;
+    private readonly string _endpoint = "http://Sep4-ModelTraining-Service:5000/";
 
     public PredictionController(HttpClient httpClient)
     {
         _httpClient = httpClient;
-        // Check if we are running on docker and set URL accordingly
-        if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
-            _endpoint = "http://Sep4-API-Service:5000/";
-        else
-            _endpoint = "http://localhost:5010/";
+      
     }
+    
+   
 
     //GET: prediction
     [HttpGet]
@@ -38,15 +38,38 @@ public class PredictionController : ControllerBase
         return JsonConvert.SerializeObject(models);
     }
 
-    // POST: prediction
-    [HttpPost]
-    public async Task<ActionResult<string>> Predict([FromBody] PredictionRequest data)
+    
+    [HttpPost("predict")]
+    public async Task<ActionResult<string>> Predict()
     {
+        using var reader = new StreamReader(Request.Body);
+        var body = await reader.ReadToEndAsync();
+
+        if (string.IsNullOrWhiteSpace(body))
+            return BadRequest("Request body is empty.");
+
+        // Peek into TypeofModel to determine which class to deserialize to
+        var jsonObj = JObject.Parse(body);
+        var typeOfModel = jsonObj["TypeofModel"]?.ToString();
+
+        if (string.IsNullOrEmpty(typeOfModel))
+            return BadRequest("Missing TypeofModel field.");
+
         string endpoint = _endpoint + "predict";
-        
-        string payload = JsonConvert.SerializeObject(data);
-        
-        var content = new StringContent(payload, System.Text.Encoding.UTF8, "application/json");
+        string payload;
+    
+        if (typeOfModel.Equals("logistic", StringComparison.OrdinalIgnoreCase))
+        {
+            var logisticRequest = jsonObj.ToObject<LogisticPredictionRequest>();
+            payload = JsonConvert.SerializeObject(logisticRequest);
+        }
+        else
+        {
+            var genericRequest = jsonObj.ToObject<PredictionRequest>();
+            payload = JsonConvert.SerializeObject(genericRequest);
+        }
+
+        var content = new StringContent(payload, Encoding.UTF8, "application/json");
         var response = await _httpClient.PostAsync(endpoint, content);
 
         if (response.IsSuccessStatusCode)
@@ -55,10 +78,13 @@ public class PredictionController : ControllerBase
         }
         else
         {
-            // TODO: Implement logging
             string error = $"{response.StatusCode}: Failed to request prediction: {await response.Content.ReadAsStringAsync()}";
             Console.WriteLine(error);
             return error;
         }
     }
+
+
+
+
 }
