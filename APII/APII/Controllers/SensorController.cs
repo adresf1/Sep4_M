@@ -5,10 +5,13 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using API;
 using APII;
+using APII.Models;
 using MLService.Models.Prediction;
 using Newtonsoft.Json.Linq; // Justér navnerum efter din løsning
+
+
+namespace APII.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
