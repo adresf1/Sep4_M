@@ -2,12 +2,14 @@
 # coding: utf-8
 
 import sys, os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, abort
+from werkzeug.exceptions import HTTPException
 import pandas as pd
 from TrainRFCModel import train_model
 from Predict import unpack_model, makePrediction, REQUIRED_FIELDS_RFC
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.automap import automap_base
 import joblib
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression  # Import Logistic Regression
@@ -34,10 +36,27 @@ def save_model_to_folder(model, model_name, folder_name):
     print(f"Model saved to {model_path}")
     return model_filename
 
+#Hjælpefunktion til at klasser bliver oprettet med automap_base
+def add_to_dict(cls):
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in cls.__table__.columns}
+    cls.to_dict = to_dict
+    return cls
+
+def create_plant_data_class(table_name: str, engine):
+    Base = automap_base()
+    Base.prepare(engine, reflect=True)
+
+    try:
+        cls = getattr(Base.classes, table_name)
+        return add_to_dict(cls)
+    except AttributeError:
+        raise RuntimeError(f"Table '{table_name}' not found in the database.")
+
 def get_model_for_table(table_name, DATABASE_URL):
     if table_name not in _model_cache:
         engine = create_engine(DATABASE_URL)
-        _model_cache[table_name] = create_plant_data_class(table_name)
+        _model_cache[table_name] = create_plant_data_class(table_name, engine)
     return _model_cache[table_name]
 
 # API endpoint to train the model
@@ -57,13 +76,18 @@ def train():
         test_size = float(data.get('test_size', 0.2))
         estimators = int(data.get('estimators', 100))
         random_state = int(data.get('random_state', 42))
+        model_type = data.get('model_type') 
 
         if not table_name or not target_measure or not model_name:
             return jsonify({"error": "Missing required fields: 'table_name', 'model_name' and 'target_measure'"}), 400
 
-        DATABASE_URL = data.get('DATABASE_URL', os.getenv('DATABASE_URL'))
+        #DATABASE_URL = data.get('DATABASE_URL', os.getenv('DATABASE_URL'))
+        DATABASE_URL = os.getenv('DATABASE_URL')
+        if not DATABASE_URL:
+            return jsonify({"error": "DATABASE_URL not provided and not found in environment variables."}), 400
+        
+        
         PlantModel = get_model_for_table(table_name, DATABASE_URL)
-
         engine = create_engine(DATABASE_URL)
         Session = sessionmaker(bind=engine)
         session = Session()
@@ -71,13 +95,12 @@ def train():
         # Query all data from the table
         data = session.query(PlantModel).all()
         if not data:
-            return jsonify({"error": f"No data found for table '{table_name}'"}), 404
-
+            return jsonify({"error":f"No data found in the table. '{table_name}'."}), 404
         # Convert the queried data to a DataFrame
         df = pd.DataFrame([plant.to_dict() for plant in data])
         
         # Train the RandomForest model
-        rfc, msg = train_model(targetMeasure=target_measure, trainningData=df, testSize=test_size, estimators=42, randomState=random_state)
+        rfc, msg = train_model(targetMeasure=target_measure, trainningData=df, testSize=test_size, estimators=42, randomState=random_state,  model_type=model_type)
 
         # Save the trained RandomForest model to a binary file
         model_name = save_model_to_folder(rfc, model_name, "TrainedModels")
@@ -91,6 +114,9 @@ def train():
         }
 
         return jsonify(response), 200
+
+    except HTTPException: 
+        raise
 
     except Exception as e:
         print(str(e))
