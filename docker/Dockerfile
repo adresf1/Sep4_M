@@ -13,6 +13,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 #Kopier resten af projektet
 COPY . .
 
+#Test Suite
+WORKDIR /app/DataProcessing
+RUN pytest TestDemoDataRaw.py > testlog.txt
+
+WORKDIR /app
 #Åbner bash
 CMD ["bash"]
 
