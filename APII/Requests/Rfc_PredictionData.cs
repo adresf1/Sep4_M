@@ -1,6 +1,6 @@
 namespace MLService.Models.Prediction;
 
-public class PredictionData
+public class Rfc_PredictionData
 {
     public int soil_type { get; set; }
     public double sunlight_hours { get; set; }
@@ -9,5 +9,9 @@ public class PredictionData
     public double temperature { get; set; }
     public double humidity { get; set; }
 
-   
+    public Rfc_PredictionData()
+    {
+        
+    }
+    
 }
