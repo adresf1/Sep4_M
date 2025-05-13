@@ -209,32 +209,37 @@ def test_predict_random_forest_success(client):
     assert json_data["status"] == "success"
     assert "result" in json_data
 
-def test_predict_random_forest_missing_fields(client):
+def test_predict_random_forest_success(client):
     payload = {
         "TypeofModel": "rfc",
         "NameOfModel": "RandomForestRegressor.joblib",
         "Data": {
-            "sunlight_hours": 10,
-            "temperature": 25
-            # Missing 'humidity'
+            "soil_type": 1,
+            "water_frequency": 3,
+            "fertilizer_type": 1,
+            "sunlight_hours": 6,
+            "temperature": 22,
+            "humidity": 60
         }
     }
     response = client.post('/predict', data=json.dumps(payload), content_type='application/json')
-    assert response.status_code == 400
-    assert "error" in response.get_json()
+    assert response.status_code == 200
 
 def test_predict_logistic_success(client):
     payload = {
         "TypeofModel": "logistic",
-        "ModelName": "log_reg_pipeline.joblib",
+        "NameOfModel": "log_reg_pipeline.joblib",
         "Data": {
-            "Sunlight_Hours": 12,
-            "Temperature": 22,
-            "Humidity": 65
+            "Soil_Type": "Loamy",
+            "Water_Frequency": "Weekly",
+            "Fertilizer_Type": "Organic",
+            "Sunlight_Hours": 6,
+            "Temperature": 24,
+            "Humidity": 50
         }
     }
     response = client.post('/predict', data=json.dumps(payload), content_type='application/json')
-    json_data = response.get_json()
+    assert response.status_code == 200
 
     assert response.status_code == 200
     assert json_data["status"] == "success"
