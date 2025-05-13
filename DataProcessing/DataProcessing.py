@@ -13,14 +13,16 @@ from sqlalchemy import distinct
 
 #Load Enviorment file 
 env_path = find_dotenv('../.env', raise_error_if_not_found=False)
+load_dotenv(env_path)
 
 env_values = dotenv_values(env_path)
+
 if "DATABASE_URL" in env_values:
     print(f"DATABASE_URL found in .env")
 else:
     print("DATABASE_URL not found in .env file contents.")
 
-db_url = env_values['DATABASE_URL']
+db_url = env_values.get("DATABASE_URL") or os.getenv("DATABASE_URL")
 
 if not db_url:
     print("ERROR: DATABASE_URL is not set in .env or environment variables.")
