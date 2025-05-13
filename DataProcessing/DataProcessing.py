@@ -17,26 +17,30 @@ db = SQLAlchemy()
 def create_app():
     print("📦 Initializing application...")
 
-    # Optionally load .env only for local or dev environment
+    #Load Enviorment file 
     env_path = find_dotenv('../.env', raise_error_if_not_found=False)
-    if env_path:
-        load_dotenv(env_path)
-        print(f"✅ .env loaded from {env_path}")
-    else:
-        print("⚠️ .env file not found, relying on system environment variables.")
 
-    # Fetch DATABASE_URL directly from environment variables (CI secrets or system env)
-    db_url = os.getenv('DATABASE_URL')
-    if not db_url:
-        raise RuntimeError("❌ DATABASE_URL must be set in .env or as a system/CI environment variable.")
+    env_values = dotenv_values(env_path)
+    if "DATABASE_URL" in env_values:
+        print(f"DATABASE_URL found in .env")
     else:
-        print(f"✅ DATABASE_URL loaded from environment variables.")
+        print("DATABASE_URL not found in .env file contents.")
 
-    # Debug: Print all loaded environment variables (to verify CI secrets)
-    print("🔍 Loaded environment variables:")
+    #db_url = env_values['DATABASE_URL']
+    # Fallback: check system environment if not in .env
+    db_url = env_values.get('DATABASE_URL') or os.getenv('DATABASE_URL')
+
+    # Print all loaded environment variables (useful for debugging in CI)
+    print("🔍 All environment variables:")
     for key, value in os.environ.items():
         if "DATABASE" in key:
             print(f"🔑 {key} = {value}")
+ 
+
+    if not db_url:
+        raise RuntimeError("❌ DATABASE_URL must be set in .env or as a system/CI environment variable.")
+    else:
+        print(f"✅ DATABASE_URL loaded: ")  # {db_url} <--- THIS will show the actual value
 
     # Create and configure the Flask app
     app = Flask(__name__)
