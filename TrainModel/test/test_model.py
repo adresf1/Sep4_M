@@ -207,7 +207,7 @@ def test_predict_random_forest_success(client):
     }
 
     response = client.post(
-        '/api/sensor/predict',
+        '/predict',
         data=json.dumps(payload),
         content_type='application/json'
     )
@@ -232,7 +232,7 @@ def test_predict_logistic_success(client):
     }
 
     response = client.post(
-        '/api/sensor/predict',
+        '/predict',
         data=json.dumps(payload),
         content_type='application/json'
     )
