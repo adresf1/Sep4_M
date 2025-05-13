@@ -195,7 +195,7 @@ def test_train_no_data_found(client,monkeypatch):
 def test_predict_random_forest_success(client):
     payload = {
         "TypeofModel": "rfc",
-        "NameOfModel": "dummy_rfc_model",
+        "NameOfModel": "RandomForestRegressor.joblib",
         "Data": {
             "sunlight_hours": 10,
             "temperature": 25,
@@ -212,7 +212,7 @@ def test_predict_random_forest_success(client):
 def test_predict_random_forest_missing_fields(client):
     payload = {
         "TypeofModel": "rfc",
-        "NameOfModel": "dummy_rfc_model",
+        "NameOfModel": "RandomForestRegressor.joblib",
         "Data": {
             "sunlight_hours": 10,
             "temperature": 25
@@ -225,8 +225,8 @@ def test_predict_random_forest_missing_fields(client):
 
 def test_predict_logistic_success(client):
     payload = {
-        "TypeofModel": "logistic_regression",
-        "ModelName": "dummy_log_model.joblib",
+        "TypeofModel": "logistic",
+        "ModelName": "log_reg_pipeline.joblib",
         "Data": {
             "Sunlight_Hours": 12,
             "Temperature": 22,
@@ -243,8 +243,8 @@ def test_predict_logistic_success(client):
 
 def test_predict_logistic_invalid_input(client):
     payload = {
-        "TypeofModel": "logistic_regression",
-        "ModelName": "dummy_log_model.joblib",
+        "TypeofModel": "logistic",
+        "ModelName": "log_reg_pipeline.joblib",
         "Data": {
             "Sunlight_Hours": 0,  # Invalid
             "Temperature": -5,    # Invalid
