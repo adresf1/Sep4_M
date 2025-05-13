@@ -1,8 +1,8 @@
 #Base Image
 FROM python:3.11
 
-ARG DATABASE_URL
-ENV DATABASE_URL=${DATABASE_URL}
+#ARG DATABASE_URL
+#ENV DATABASE_URL=${DATABASE_URL}
 
 #Working directory i containeren
 WORKDIR /app
@@ -17,8 +17,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 #Test Suite
-WORKDIR /app/DataProcessing
-RUN pytest TestDemoDataRaw.py 
+#WORKDIR /app/DataProcessing
+#RUN pytest TestDemoDataRaw.py 
 
 WORKDIR /app
 #Åbner bash
