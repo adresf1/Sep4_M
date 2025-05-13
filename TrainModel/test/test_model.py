@@ -22,14 +22,14 @@ class DummyModel:
 def client(monkeypatch):
     app.config['TESTING'] = True
 
-    # Stub create_plant_data_class → DummyPlant
+    # Stub create_plant_data_class to DummyPlant
     monkeypatch.setattr(
         'ModelTrainingAPI.create_plant_data_class',
         lambda table_name: DummyPlant,
         raising=False
     )
 
-    # Stub sessionmaker → tom liste
+    # Stub sessionmaker to tom liste
     class FakeSession:
         def __init__(self, items): self._items = items
         def query(self, model):   return type('Q', (), {'all': lambda s: self._items})()
@@ -40,10 +40,10 @@ def client(monkeypatch):
         lambda bind: FakeSession([DummyPlant({'a':1,'b':2})])
     )
 
-    # Stub train_model → DummyModel + metrics
+    # Stub train_model til DummyModel + metrics
     monkeypatch.setattr(
         'ModelTrainingAPI.train_model',
-        lambda targetMeasure, trainningData, testSize, estimators, randomState:
+        lambda targetMeasure, trainningData, testSize, estimatilrs, randomState:
             (DummyModel([0.1, 0.9]), {'accuracy': 0.9})
     )
 
@@ -108,7 +108,7 @@ def test_get_model_for_table_caches(monkeypatch):
 
     calls = []
     # Returnér en ny klasse per table_name
-    def fake_create(name):
+    def fake_create(name, engine):
         calls.append(name)
         return type(f"Plant_{name}", (), {})  # unik klasse for hver name
 
@@ -153,33 +153,41 @@ def test_train_missing_fields(client, missing):
     assert resp.status_code == 400
     assert "Missing required fields" in resp.get_json()["error"]
 
-def test_train_no_data_found(client, monkeypatch):
-    # Definér en Dummy-session-klasse
+def test_train_no_data_found(client,monkeypatch):
+    #Environment variable
+    monkeypatch.setenv('DATABASE_URL', 'dummy://url')
+
+    import ModelTrainingAPI
+
+    #Stub get_model_for_table til at returnere en klasse uden data
+    Dummy= type('Dummy', (), {})
+    monkeypatch.setattr(ModelTrainingAPI, 'get_model_for_table', lambda table_name, url: Dummy, raising=True)
+
+    #Dummy-session
     class EmptySession:
-        def __init__(self): pass
-        def query(self, m):
+        def __init__(self,*args, **kwargs): pass
+        def query(self,m):
             return type('Q', (), {'all': lambda self: []})()
         def close(self): pass
+    
+    #Stub create_engine og sessionmaker
+    monkeypatch.setattr(ModelTrainingAPI, 'create_engine', lambda *args, **kwargs: object(), raising=True)
+    monkeypatch.setattr(ModelTrainingAPI, 'sessionmaker', lambda *args, **kwargs: EmptySession, raising=True)
 
-    # Stub sessionmaker → returnér klassen (ikke en instans)
-    monkeypatch.setattr(
-        'ModelTrainingAPI.sessionmaker',
-        lambda bind=None, **kw: EmptySession,
-        raising=True
-    )
-
+    #Kør POST på /train
     payload = {
-        'model_name':     'm',
-        'table_name':     't',
+        'model_name': 'm',
+        'table_name': 't',
         'target_measure': 'y',
-        'db_url':         'sqlite:///:memory:'
+        'db_url': 'sqlite:///:memory:'
     }
+
     resp = client.post('/train', json=payload)
 
+    #Assert at status er 404
     assert resp.status_code == 404
     data = resp.get_json()
-    assert "No data found for table 't'" in data["error"]
-
+    assert "No data found in the table." in data["error"]
 
 
 #def test_predict_missing_fields(client):
