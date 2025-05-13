@@ -259,3 +259,85 @@ def test_predict_logistic_invalid_input(client):
 
 
 
+def test_predict_empty_json(client):
+    response = client.post('/predict', data=json.dumps({}), content_type='application/json')
+    assert response.status_code == 400
+    assert "error" in response.get_json()
+
+
+
+def test_predict_logistic_invalid_types(client):
+    payload = {
+        "TypeofModel": "logistic",
+        "NameOfModel": "log_reg_pipeline.joblib",
+        "Data": {
+            "Soil_Type": "Loamy",
+            "Water_Frequency": "Weekly",
+            "Fertilizer_Type": "Organic",
+            "Sunlight_Hours": "six",   # Invalid type
+            "Temperature": "twenty",   # Invalid type
+            "Humidity": "high"         # Invalid type
+        }
+    }
+    response = client.post('/predict', data=json.dumps(payload), content_type='application/json')
+    assert response.status_code == 500 or response.status_code == 400
+    assert "error" in response.get_json()
+
+
+
+
+
+def test_predict_logistic_invalid_types(client):
+    payload = {
+        "TypeofModel": "logistic",
+        "NameOfModel": "log_reg_pipeline.joblib",
+        "Data": {
+            "Soil_Type": "Loamy",
+            "Water_Frequency": "Weekly",
+            "Fertilizer_Type": "Organic",
+            "Sunlight_Hours": "six",   # Invalid type
+            "Temperature": "twenty",   # Invalid type
+            "Humidity": "high"         # Invalid type
+        }
+    }
+    response = client.post('/predict', data=json.dumps(payload), content_type='application/json')
+    assert response.status_code == 500 or response.status_code == 400
+    assert "error" in response.get_json()
+
+
+
+def test_predict_model_not_found(client):
+    payload = {
+        "TypeofModel": "logistic",
+        "NameOfModel": "non_existing_model.joblib",  # Invalid model
+        "Data": {
+            "Soil_Type": "Loamy",
+            "Water_Frequency": "Weekly",
+            "Fertilizer_Type": "Organic",
+            "Sunlight_Hours": 6,
+            "Temperature": 24,
+            "Humidity": 50
+        }
+    }
+    response = client.post('/predict', data=json.dumps(payload), content_type='application/json')
+    assert response.status_code == 404
+    assert "error" in response.get_json()
+
+
+
+def test_predict_unsupported_model_type(client):
+    payload = {
+        "TypeofModel": "unsupported_model",
+        "NameOfModel": "log_reg_pipeline.joblib",
+        "Data": {
+            "Soil_Type": "Loamy",
+            "Water_Frequency": "Weekly",
+            "Fertilizer_Type": "Organic",
+            "Sunlight_Hours": 6,
+            "Temperature": 24,
+            "Humidity": 50
+        }
+    }
+    response = client.post('/predict', data=json.dumps(payload), content_type='application/json')
+    assert response.status_code == 400
+    assert "error" in response.get_json()
