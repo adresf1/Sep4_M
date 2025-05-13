@@ -7,22 +7,30 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import scoped_session, sessionmaker
 import math
 import os
-from dotenv import load_dotenv
-load_dotenv()
+from dotenv import load_dotenv, find_dotenv, dotenv_values
 from DemoData import create_plant_model, calculate_column_averages, create_preprocessed_plant_model, one_hot_encode_columns, copy_to_preprocessed
 from sqlalchemy import distinct
 
-app = Flask(__name__)
-print("Starting app...")
-# Use DATABASE_URL from .env or GitHub Actions, fallback if needed
-#db_url = os.getenv('DATABASE_URL') or os.getenv('SQLALCHEMY_DATABASE_URI')
-db_url = os.environ["DATABASE_URL"]
+#Load Enviorment file 
+env_path = find_dotenv('../.env', raise_error_if_not_found=False)
+
+env_values = dotenv_values(env_path)
+if "DATABASE_URL" in env_values:
+    print(f"DATABASE_URL found in .env")
+else:
+    print("DATABASE_URL not found in .env file contents.")
+
+db_url = env_values['DATABASE_URL']
 
 if not db_url:
-    print("ERROR: DATABASE_URL is not set.")
+    print("ERROR: DATABASE_URL is not set in .env or environment variables.")
+    raise RuntimeError("DATABASE_URL must be set in .env file or as a system/CI environment variable.")
 else:
-    print("Database URL:", db_url)
-    
+    print(f" DATABASE_URL loaded")
+
+
+print("Starting app...")
+app = Flask(__name__)    
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)

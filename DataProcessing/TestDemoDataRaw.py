@@ -9,6 +9,12 @@ def client():
     with app.test_client() as client:
         yield client
 
+#Fail Test to verify a docker build will abandon build if an unittest fails 
+#def test_force_fail():
+#    print("\n🔍 Running test_force_fail (intentionally fails)...")
+#    value = 42
+#    assert value == 0, f"❌ test_force_fail failed: expected 0, got {value}"
+
 print("Starting Tests.....")
 
 #================================== Get all function test ==================================
