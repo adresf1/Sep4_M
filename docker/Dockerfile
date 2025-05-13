@@ -15,7 +15,7 @@ COPY . .
 
 #Test Suite
 WORKDIR /app/DataProcessing
-RUN pytest TestDemoDataRaw.py > testlog.txt
+RUN pytest TestDemoDataRaw.py 
 
 WORKDIR /app
 #Åbner bash
