@@ -220,7 +220,7 @@ def test_predict_random_forest_success(client):
 def test_predict_logistic_success(client):
     payload = {
         "TypeofModel": "logistic",
-        "ModelName": "log_reg_pipeline.joblib",
+        "NameOfModel": "log_reg_pipeline.joblib",
         "Data": {
             "Soil_Type": "Loamy",
             "Water_Frequency": "Weekly",
@@ -245,7 +245,7 @@ def test_predict_logistic_success(client):
 def test_predict_logistic_invalid_input(client):
     payload = {
         "TypeofModel": "logistic",
-        "ModelName": "log_reg_pipeline.joblib",
+        "NameOfModel": "log_reg_pipeline.joblib",
         "Data": {
             "Sunlight_Hours": 0,  # Invalid
             "Temperature": -5,    # Invalid
