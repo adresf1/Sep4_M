@@ -29,6 +29,7 @@ def client(monkeypatch):
         raising=False
     )
 
+
     # Stub sessionmaker to tom liste
     class FakeSession:
         def __init__(self, items): self._items = items
