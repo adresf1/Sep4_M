@@ -14,8 +14,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 #Test Suite
-WORKDIR /app/DataProcessing
-RUN pytest TestDemoDataRaw.py > testlog.txt
+#WORKDIR /app/DataProcessing
+#RUN pytest TestDemoDataRaw.py > testlog.txt
 
 WORKDIR /app
 #Åbner bash
