@@ -18,7 +18,7 @@ services:
     stdin_open: true
     tty: true
     networks:
-      - sep4-network
+      - SEP4_NETWORK
 
   Sep4-DataProcessing-Service:
     build:
@@ -33,7 +33,7 @@ services:
     stdin_open: true
     tty: true
     networks:
-      - sep4-network
+      - SEP4_NETWORK
 
   Sep4-API-Service:
     build:
@@ -48,7 +48,7 @@ services:
     environment:
       - ASPNETCORE_URLS=http://+:8080
     networks:
-      - sep4-network
+      - SEP4_NETWORK
 
   Sep4-ML-Service:
     build:
@@ -63,8 +63,8 @@ services:
     environment:
       - ASPNETCORE_URLS=http://+:8080
     networks:
-      - sep4-network
+      - SEP4_NETWORK
 
 networks:
-  sep4-network:
-    driver: bridge
+  SEP4_NETWORK:
+    external: true
