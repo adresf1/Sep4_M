@@ -190,6 +190,74 @@ def test_train_no_data_found(client,monkeypatch):
     assert "No data found in the table." in data["error"]
 
 
+# --- Predict-tests ------------------------------------------------------------
+
+def test_predict_random_forest_success(client):
+    payload = {
+        "TypeofModel": "rfc",
+        "NameOfModel": "dummy_rfc_model",
+        "Data": {
+            "sunlight_hours": 10,
+            "temperature": 25,
+            "humidity": 60
+        }
+    }
+    response = client.post('/predict', data=json.dumps(payload), content_type='application/json')
+    json_data = response.get_json()
+
+    assert response.status_code == 200
+    assert json_data["status"] == "success"
+    assert "result" in json_data
+
+def test_predict_random_forest_missing_fields(client):
+    payload = {
+        "TypeofModel": "rfc",
+        "NameOfModel": "dummy_rfc_model",
+        "Data": {
+            "sunlight_hours": 10,
+            "temperature": 25
+            # Missing 'humidity'
+        }
+    }
+    response = client.post('/predict', data=json.dumps(payload), content_type='application/json')
+    assert response.status_code == 400
+    assert "error" in response.get_json()
+
+def test_predict_logistic_success(client):
+    payload = {
+        "TypeofModel": "logistic_regression",
+        "ModelName": "dummy_log_model.joblib",
+        "Data": {
+            "Sunlight_Hours": 12,
+            "Temperature": 22,
+            "Humidity": 65
+        }
+    }
+    response = client.post('/predict', data=json.dumps(payload), content_type='application/json')
+    json_data = response.get_json()
+
+    assert response.status_code == 200
+    assert json_data["status"] == "success"
+    assert "prediction" in json_data
+    assert "confidence" in json_data
+
+def test_predict_logistic_invalid_input(client):
+    payload = {
+        "TypeofModel": "logistic_regression",
+        "ModelName": "dummy_log_model.joblib",
+        "Data": {
+            "Sunlight_Hours": 0,  # Invalid
+            "Temperature": -5,    # Invalid
+            "Humidity": 150       # Invalid
+        }
+    }
+    response = client.post('/predict', data=json.dumps(payload), content_type='application/json')
+    assert response.status_code == 400
+    assert "error" in response.get_json()
+
+
+
+
 #def test_predict_missing_fields(client):
     # Send an empty JSON payload with proper content-type
 #    response = client.post('/rfc_predict', json={})
