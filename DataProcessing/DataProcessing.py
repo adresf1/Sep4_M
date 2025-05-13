@@ -11,63 +11,52 @@ from dotenv import load_dotenv, find_dotenv, dotenv_values
 from DemoData import create_plant_model, calculate_column_averages, create_preprocessed_plant_model, one_hot_encode_columns, copy_to_preprocessed
 from sqlalchemy import distinct
 
-#Load Enviorment file 
-env_path = find_dotenv('../.env', raise_error_if_not_found=False)
-load_dotenv(env_path)
-
-env_values = dotenv_values(env_path)
-
-if "DATABASE_URL" in env_values:
-    print(f"DATABASE_URL found in .env")
-else:
-    print("DATABASE_URL not found in .env file contents.")
-
-db_url = env_values.get("DATABASE_URL") or os.getenv("DATABASE_URL")
-
-if not db_url:
-    print("ERROR: DATABASE_URL is not set in .env or environment variables.")
-    raise RuntimeError("DATABASE_URL must be set in .env file or as a system/CI environment variable.")
-else:
-    print(f" DATABASE_URL loaded")
+db = SQLAlchemy()
 
 
-print("Starting app...")
-app = Flask(__name__)    
-app.config['SQLALCHEMY_DATABASE_URI'] = db_url
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
+def create_app():
+    print("📦 Initializing application...")
+
+    #Load Enviorment file 
+    env_path = find_dotenv('../.env', raise_error_if_not_found=False)
+
+    env_values = dotenv_values(env_path)
+    if "DATABASE_URL" in env_values:
+        print(f"DATABASE_URL found in .env")
+    else:
+        print("DATABASE_URL not found in .env file contents.")
+
+    #db_url = env_values['DATABASE_URL']
+    # Fallback: check system environment if not in .env
+    db_url = env_values.get('DATABASE_URL') or os.getenv('DATABASE_URL')
+
+    # Print all loaded environment variables (useful for debugging in CI)
+    print("🔍 All environment variables:")
+    for key, value in os.environ.items():
+        if "DATABASE" in key:
+            print(f"🔑 {key} = {value}")
+ 
+
+    if not db_url:
+        raise RuntimeError("❌ DATABASE_URL must be set in .env or as a system/CI environment variable.")
+    else:
+        print(f"✅ DATABASE_URL loaded: ")  # {db_url} <--- THIS will show the actual value
+
+    # Create and configure the Flask app
+    app = Flask(__name__)
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+    # Initialize database
+    db.init_app(app)
+    print("✅ App and database initialized")
+
+    return app
+
 
 print("Db connection started...")
 
-class SensorData(db.Model):
-    __tablename__ = 'sensor_data'
-
-    id = db.Column(db.Integer, primary_key=True)
-    air_temperature = db.Column(db.Float)
-    air_humidity = db.Column(db.Float)
-    soil_moisture = db.Column(db.Float)
-    light = db.Column(db.Float)
-    light_type = db.Column(db.String)
-    light_max = db.Column(db.Float)
-    light_min = db.Column(db.Float)
-    artificial_light = db.Column(db.Boolean)
-    light_avg = db.Column(db.Float)
-    distance_to_height = db.Column(db.Float)
-    water = db.Column(db.Float)
-    time_since_last_watering = db.Column(db.Float)
-    water_amount = db.Column(db.Float)
-    watering_frequency = db.Column(db.Float)
-    timestamp = db.Column(db.String)
-    soil_type = db.Column(db.String)
-    fertilizer_type = db.Column(db.String)
-    experiment_number = db.Column(db.Integer)
-    
-    # Calculated figures
-    light_variation = db.Column(db.Float)
-    water_need_score = db.Column(db.Float)
-
-with app.app_context():
-    db.create_all()
+app = create_app()
 
 @app.route('/fetch-sensor-data', methods=['POST'])
 def post_sensor_data():
@@ -381,4 +370,35 @@ def preprocess_data():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
+    app = create_app()
     app.run(host='0.0.0.0', port=5000)
+
+class SensorData(db.Model):
+    __tablename__ = 'sensor_data'
+
+    id = db.Column(db.Integer, primary_key=True)
+    air_temperature = db.Column(db.Float)
+    air_humidity = db.Column(db.Float)
+    soil_moisture = db.Column(db.Float)
+    light = db.Column(db.Float)
+    light_type = db.Column(db.String)
+    light_max = db.Column(db.Float)
+    light_min = db.Column(db.Float)
+    artificial_light = db.Column(db.Boolean)
+    light_avg = db.Column(db.Float)
+    distance_to_height = db.Column(db.Float)
+    water = db.Column(db.Float)
+    time_since_last_watering = db.Column(db.Float)
+    water_amount = db.Column(db.Float)
+    watering_frequency = db.Column(db.Float)
+    timestamp = db.Column(db.String)
+    soil_type = db.Column(db.String)
+    fertilizer_type = db.Column(db.String)
+    experiment_number = db.Column(db.Integer)
+    
+    # Calculated figures
+    light_variation = db.Column(db.Float)
+    water_need_score = db.Column(db.Float)
+
+with app.app_context():
+    db.create_all()

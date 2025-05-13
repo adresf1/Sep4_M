@@ -1,10 +1,11 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from DataProcessing import app
+from DataProcessing import create_app
 
 print("Starting pytest.fixture.....")
 @pytest.fixture
 def client():
+    app = create_app()
     app.config['TESTING'] = True
     with app.test_client() as client:
         yield client
@@ -13,7 +14,7 @@ def client():
 #def test_force_fail():
 #    print("\n🔍 Running test_force_fail (intentionally fails)...")
 #    value = 42
-#    assert value == 0, f"❌ test_force_fail failed: expected 0, got {value}"
+#    assert value == 0, f"test_force_fail failed: expected 0, got {value}"
 
 print("Starting Tests.....")
 
