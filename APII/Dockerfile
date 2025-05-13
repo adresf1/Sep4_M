@@ -1,17 +1,21 @@
-﻿# Use .NET 8 SDK to build the application
+﻿FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+USER $APP_UID
+WORKDIR /app
+
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+ARG BUILD_CONFIGURATION=Release
+WORKDIR /src
+COPY ["APII/APII.csproj", "APII/"]
+RUN dotnet restore "APII/APII.csproj"
+COPY . .
+WORKDIR "/src/APII"
+RUN dotnet build "APII.csproj" -c $BUILD_CONFIGURATION -o /app/build
+
+FROM build AS publish
+ARG BUILD_CONFIGURATION=Release
+RUN dotnet publish "APII.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+
+FROM base AS final
 WORKDIR /app
-
-# Copy and restore dependencies
-COPY *.csproj ./
-RUN dotnet restore
-
-# Copy the rest of the code, build, and publish
-COPY . ./
-RUN dotnet publish -c Release -o /out
-
-# Use .NET 8 runtime to run the app
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
-WORKDIR /app
-COPY --from=build /out ./
+COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "APII.dll"]
