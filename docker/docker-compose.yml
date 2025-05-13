@@ -26,6 +26,8 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+      args:
+        - DATABASE_URL
     ports:
       - "5000:5000"
     image: sep4-dataprocessing-env
