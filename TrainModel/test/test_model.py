@@ -192,96 +192,69 @@ def test_train_no_data_found(client,monkeypatch):
 
 # --- Predict-tests ------------------------------------------------------------
 
-# def test_predict_random_forest_success(client):
-#     payload = {
-#         "TypeofModel": "rfc",
-#         "NameOfModel": "RandomForestRegressor.joblib",
-#         "Data": {
-#             "sunlight_hours": 10,
-#             "temperature": 25,
-#             "humidity": 60
-#         }
-#     }
-#     response = client.post('/predict', data=json.dumps(payload), content_type='application/json')
-#     json_data = response.get_json()
+def test_predict_random_forest_success(client):
+    payload = {
+        "TypeofModel": "rfc",
+        "NameOfModel": "RandomForestRegressor.joblib",
+        "Data": {
+            "soil_type": 1,
+            "sunlight_hours": 6,
+            "water_frequency": 3,
+            "fertilizer_type": 1,
+            "temperature": 22,
+            "humidity": 60
+        }
+    }
 
-#     assert response.status_code == 200
-#     assert json_data["status"] == "success"
-#     assert "result" in json_data
+    response = client.post(
+        '/api/sensor/predict',
+        data=json.dumps(payload),
+        content_type='application/json'
+    )
 
-# def test_predict_random_forest_success(client):
-#     payload = {
-#         "TypeofModel": "rfc",
-#         "NameOfModel": "RandomForestRegressor.joblib",
-#         "Data": {
-#             "soil_type": 1,
-#             "water_frequency": 3,
-#             "fertilizer_type": 1,
-#             "sunlight_hours": 6,
-#             "temperature": 22,
-#             "humidity": 60
-#         }
-#     }
-#     response = client.post('/predict', data=json.dumps(payload), content_type='application/json')
-#     assert response.status_code == 200
+    assert response.status_code == 200
+    json_data = response.get_json()
+    assert json_data["status"] == "success"
+    assert "result" in json_data or "prediction" in json_data
 
-# def test_predict_logistic_success(client):
-#     payload = {
-#         "TypeofModel": "logistic",
-#         "NameOfModel": "log_reg_pipeline.joblib",
-#         "Data": {
-#             "Soil_Type": "Loamy",
-#             "Water_Frequency": "Weekly",
-#             "Fertilizer_Type": "Organic",
-#             "Sunlight_Hours": 6,
-#             "Temperature": 24,
-#             "Humidity": 50
-#         }
-#     }
-#     response = client.post('/predict', data=json.dumps(payload), content_type='application/json')
-#     assert response.status_code == 200
+def test_predict_logistic_success(client):
+    payload = {
+        "TypeofModel": "logistic",
+        "ModelName": "log_reg_pipeline.joblib",
+        "Data": {
+            "Soil_Type": "Loamy",
+            "Water_Frequency": "Weekly",
+            "Fertilizer_Type": "Organic",
+            "Sunlight_Hours": 6,
+            "Temperature": 24,
+            "Humidity": 50
+        }
+    }
 
-#     assert response.status_code == 200
-#     assert json_data["status"] == "success"
-#     assert "prediction" in json_data
-#     assert "confidence" in json_data
+    response = client.post(
+        '/api/sensor/predict',
+        data=json.dumps(payload),
+        content_type='application/json'
+    )
 
-# def test_predict_logistic_invalid_input(client):
-#     payload = {
-#         "TypeofModel": "logistic",
-#         "ModelName": "log_reg_pipeline.joblib",
-#         "Data": {
-#             "Sunlight_Hours": 0,  # Invalid
-#             "Temperature": -5,    # Invalid
-#             "Humidity": 150       # Invalid
-#         }
-#     }
-#     response = client.post('/predict', data=json.dumps(payload), content_type='application/json')
-#     assert response.status_code == 400
-#     assert "error" in response.get_json()
+    assert response.status_code == 200
+    json_data = response.get_json()
+    assert json_data["status"] == "success"
+    assert "result" in json_data or "prediction" in json_data
+
+def test_predict_logistic_invalid_input(client):
+    payload = {
+        "TypeofModel": "logistic",
+        "ModelName": "log_reg_pipeline.joblib",
+        "Data": {
+            "Sunlight_Hours": 0,  # Invalid
+            "Temperature": -5,    # Invalid
+            "Humidity": 150       # Invalid
+        }
+    }
+    response = client.post('/predict', data=json.dumps(payload), content_type='application/json')
+    assert response.status_code == 400
+    assert "error" in response.get_json()
 
 
 
-
-#def test_predict_missing_fields(client):
-    # Send an empty JSON payload with proper content-type
-#    response = client.post('/rfc_predict', json={})
-    
-#    assert response.status_code == 400
-#   response_data = response.get_json()
-#   assert response_data is not None
-#    assert "error" in response_data
-#    assert "Missing required top-level keys" in response_data["error"]
-
-#def test_train_no_json(client):
-    # Send an empty body with Content-Type: application/json
-#    response = client.post('/train', data="", content_type="application/json")
-    
-    #Added this comment to test pull request
-    # Assert that the status code is 415 (Unsupported Media Type) if no body is provided
-    #will return bad request(400) becuase the underlying python cant connect to database  
- #   assert response.status_code == 400  # 415 because empty JSON content is unsupported
-
-    # Check if the error message is returned in the response text
-    #response_data = response.get_data(as_text=True)
-    #assert "Unsupported Media Type" in response_data  # You can customize this depending on your actual response
