@@ -37,6 +37,7 @@ services:
     stdin_open: true
     tty: true
     environment:
+      - PYTHONPATH=.
       - DATABASE_URL=${DATABASE_URL}
     networks:
       - sep4-network
