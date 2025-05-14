@@ -220,7 +220,7 @@ def test_predict_random_forest_success(client):
 def test_predict_logistic_success(client):
     payload = {
         "TypeofModel": "logistic",
-        "NameOfModel": "log_reg_pipeline.joblib",  # This was fixed earlier
+        "NameOfModel": "log_reg_pipeline.joblib",  
         "Data": {
             "Soil_Type": "Loamy",
             "Water_Frequency": "Weekly",
@@ -237,7 +237,6 @@ def test_predict_logistic_success(client):
         content_type='application/json'
     )
 
-    # 🔍 DEBUGGING
     print("RESPONSE STATUS CODE:", response.status_code)
     print("RESPONSE DATA:", response.data.decode())
 
@@ -341,3 +340,6 @@ def test_predict_unsupported_model_type(client):
     response = client.post('/predict', data=json.dumps(payload), content_type='application/json')
     assert response.status_code == 400
     assert "error" in response.get_json()
+
+
+    
