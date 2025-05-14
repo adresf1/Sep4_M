@@ -5,7 +5,7 @@ import sys, os
 from flask import Flask, request, jsonify, abort
 from werkzeug.exceptions import HTTPException
 import pandas as pd
-from TrainRFCModel import train_model
+from TrainRFCModel import train_model, train_rfc, train_lr
 from Predict import unpack_model, makePrediction, REQUIRED_FIELDS_RFC
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -16,8 +16,17 @@ from sklearn.linear_model import LogisticRegression  # Import Logistic Regressio
 from datetime import datetime
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.model_selection import train_test_split
 from dotenv import load_dotenv
 load_dotenv()
+
+ALLOWED_MODEL_TYPES ={'random_forest', 'logistic_regression'}
+SHORTCUT_MAP = {
+    'rfc': 'random_forrest',
+    'rf': 'random_forest',
+    'lr': 'logistic_regression',
+    'logistic': 'logistic_regression',
+}
 
 
 app = Flask(__name__)
@@ -63,71 +72,90 @@ def get_model_for_table(table_name, DATABASE_URL):
 @app.route('/train', methods=['POST'])
 def train():
     # Get the incoming JSON data from the request
-    data = request.get_json(silent=True)
+    data = request.get_json(silent=True) or {}
 
-    if not data:
-        return jsonify({"error": "No JSON data provided"}), 400
-    
-    session = None #Session bliver oprettet i try-blokken
+   #Validering af payload
+    missing = [f for f in ['model_name','table_name','targetMeasure','model_type'] if not data.get(f)]
+    if missing:
+        return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
+    #Model-type validering + mapping
+    model_type = data.get('model_type', '').lower()
+    model_type = SHORTCUT_MAP.get(model_type, model_type)
+    if model_type not in ALLOWED_MODEL_TYPES:
+        return jsonify({"error": f"invalid model type '{model_type}'. Allowed types are: {', '.join(ALLOWED_MODEL_TYPES)}"}), 400
+    #Hent parametre fra payload
+    model_name = data.get('model_name')
+    table_name = data.get('table_name')
+    target_measure = data.get('targetMeasure')
+    test_size = float(data.get('testSize', 0.2))
+    random_state = int(data.get('randomState', 42))
+    #RFC parametre
+    estimators = int(data.get('estimators', 100))
+    max_depth = data.get('max_depth')
+    if max_depth is not None:
+        max_depth = int(max_depth)
+    #LR parametre
+    solver = data.get('solver', 'lbfgs')
+    penalty = data.get('penalty', 'l2')
+    C = float(data.get('C', 1.0))
+    max_iter = int(data.get('max_iter', 1000))
+
+    #Database URL
+    DATABASE_URL = os.getenv('DATABASE_URL')
+    if not DATABASE_URL:
+        return jsonify({"error": "DATABASE_URL not set in environment variables"}), 500
+    #Indlæsning af ORM-model
+    PlantModel = get_model_for_table(table_name, DATABASE_URL)
+    engine = create_engine(DATABASE_URL)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    records = session.query(PlantModel).all()
+    session.close()
+    if not records:
+        return jsonify({"error": f"No records found in table '{table_name}'"}), 404
+    #Konvertering af records til DataFrame og split af data
+    df = pd.DataFrame([record.to_dict() for record in records])
+    x = df.drop([target_measure], axis=1)
+    y = df[target_measure]
+    X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=test_size, random_state=random_state)
+
+    #bruger train_model til at dispatch til train_rfc eller train_lr
+    args = {
+        'trainningData': df,
+        'targetMeasure': target_measure,
+        'testSize': test_size,
+        'randomState': random_state,
+        'model_type': model_type,
+        'estimators': estimators,
+        'max_depth': max_depth,
+        'solver': solver,
+        'penalty': penalty,
+        'C': C,
+        'max_iter': max_iter
+    }
     try:
-        model_name = data.get('model_name')
-        table_name = data.get('table_name')
-        target_measure = data.get('target_measure')
-        test_size = float(data.get('test_size', 0.2))
-        estimators = int(data.get('estimators', 100))
-        random_state = int(data.get('random_state', 42))
-        model_type = data.get('model_type') 
+        clf, metrics = train_model(**args)
 
-        if not table_name or not target_measure or not model_name:
-            return jsonify({"error": "Missing required fields: 'table_name', 'model_name' and 'target_measure'"}), 400
+        #Gem modellen med type i navnet
+        filename = save_model_to_folder(clf, f"{model_name}_{model_type}", "TrainedModels")
 
-        #DATABASE_URL = data.get('DATABASE_URL', os.getenv('DATABASE_URL'))
-        DATABASE_URL = os.getenv('DATABASE_URL')
-        if not DATABASE_URL:
-            return jsonify({"error": "DATABASE_URL not provided and not found in environment variables."}), 400
-        
-        
-        PlantModel = get_model_for_table(table_name, DATABASE_URL)
-        engine = create_engine(DATABASE_URL)
-        Session = sessionmaker(bind=engine)
-        session = Session()
-        
-        # Query all data from the table
-        data = session.query(PlantModel).all()
-        if not data:
-            return jsonify({"error":f"No data found in the table. '{table_name}'."}), 404
-        # Convert the queried data to a DataFrame
-        df = pd.DataFrame([plant.to_dict() for plant in data])
-        
-        # Train the RandomForest model
-        rfc, msg = train_model(targetMeasure=target_measure, trainningData=df, testSize=test_size, estimators=42, randomState=random_state,  model_type=model_type)
-
-        # Save the trained RandomForest model to a binary file
-        model_name = save_model_to_folder(rfc, model_name, "TrainedModels")
-        
-        # Return a success response with the model filename and evaluation metrics
-        response = {
+        return jsonify({
             "status": "success",
-            "message": "RandomForest model trained successfully.",
-            "model_filename": model_name,
-            "evaluation_metrics": msg
-        }
-
-        return jsonify(response), 200
-
-    except HTTPException: 
+            "message": f"{model_type.replace('_', ' ').title()} model trained successfully.",
+            "model_name": filename,
+            "evaluation_metrics": metrics
+        }), 200
+    except HTTPException:
         raise
-
     except Exception as e:
-        print(str(e))
-        exc_type, exc_obj, exc_tb = sys.exc_info()
-        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-        return jsonify({"error": f"Failed to process request: {str(e)}"}), 500
-
+        app.logger.error(f"Error in /train: {str(e)}")
+        return jsonify({
+            "error": str(e)
+        }), 500
     finally:
         if session is not None:
             session.close()
-
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
