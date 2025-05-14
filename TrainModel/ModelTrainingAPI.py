@@ -71,82 +71,93 @@ def get_model_for_table(table_name, DATABASE_URL):
 # API endpoint to train the model
 @app.route('/train', methods=['POST'])
 def train():
-    # Get the incoming JSON data from the request
     data = request.get_json(silent=True)
 
     if data is None:
         return jsonify({"error": "No JSON data provided"}), 400
 
-    #Tvangs-felter: model_name, table_name, target_measure, model_type
-    #Accepter både camelCase og snake_case
+    # Tvangsfelter: model_name, table_name, target_measure (understøtter camelCase og snake_case)
     model_name = data.get('model_name')
     table_name = data.get('table_name')
     target_measure = data.get('targetMeasure') or data.get('target_measure')
-    model_type = data.get('model_type', 'random_forest') #default til random_forest
+    model_type = data.get('model_type', 'random_forest')  # default til random_forest
 
-    #check missing fields
-    missing = [k for k in ['model_name', 'table_name', 'target_measure'] if not locals()[k]]
-    #model_type har defualt værdi, så den skal ikke checkes
-    if missing:
-        return jsonify({"error": f"Missing required fields: {', '.join(missing)}"}), 400
-    
+    # Brug eksplicit kontrol i stedet for locals()[k] for at undgå KeyError
+    missing_fields = []
+    if not model_name:
+        missing_fields.append('model_name')
+    if not table_name:
+        missing_fields.append('table_name')
+    if not target_measure:
+        missing_fields.append('target_measure')
+
+    if missing_fields:
+        return jsonify({"error": f"Missing required fields: {', '.join(missing_fields)}"}), 400
+
+
     # Model-type validering + mapping
-    model_type = data.get('model_type', '').lower()
+    model_type = model_type.lower()
     model_type = SHORTCUT_MAP.get(model_type, model_type)
     if model_type not in ALLOWED_MODEL_TYPES:
-        return jsonify({"error": f"invalid model type '{model_type}'. Allowed types are: {', '.join(ALLOWED_MODEL_TYPES)}"}), 400
-    #Hent parametre fra payload
+        return jsonify({"error": f"Invalid model type '{model_type}'. Allowed types are: {', '.join(ALLOWED_MODEL_TYPES)}"}), 400
+
+    # Hent parametre fra payload
     test_size = float(data.get('testSize', 0.2))
     random_state = int(data.get('randomState', 42))
-    #RFC parametre
+
+    # RFC parametre
     estimators = int(data.get('estimators', 100))
     max_depth = data.get('max_depth')
     if max_depth is not None:
         max_depth = int(max_depth)
-    #LR parametre
+
+    # LR parametre
     solver = data.get('solver', 'lbfgs')
     penalty = data.get('penalty', 'l2')
     C = float(data.get('C', 1.0))
     max_iter = int(data.get('max_iter', 1000))
 
-    #Tillad Database URL payload eller brug miljøvariabel
+    # Database URL
     DATABASE_URL = data.get('db_url') or os.getenv('DATABASE_URL')
     if not DATABASE_URL:
         return jsonify({"error": "DATABASE_URL not set in environment variables"}), 500
-    #Indlæsning af ORM-model
-    PlantModel = get_model_for_table(table_name, DATABASE_URL)
-    engine = create_engine(DATABASE_URL)
-    Session = sessionmaker(bind=engine)
-    session = Session()
 
-    records = session.query(PlantModel).all()
-    session.close()
-    if not records:
-        return jsonify({"error": f"No records found in table '{table_name}'"}), 404
-    #Konvertering af records til DataFrame og split af data
-    df = pd.DataFrame([record.to_dict() for record in records])
-    x = df.drop([target_measure], axis=1)
-    y = df[target_measure]
-    X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=test_size, random_state=random_state)
-
-    #bruger train_model til at dispatch til train_rfc eller train_lr
-    args = {
-        'trainningData': df,
-        'targetMeasure': target_measure,
-        'testSize': test_size,
-        'randomState': random_state,
-        'model_type': model_type,
-        'estimators': estimators,
-        'max_depth': max_depth,
-        'solver': solver,
-        'penalty': penalty,
-        'C': C,
-        'max_iter': max_iter
-    }
     try:
+        # ORM-model og data
+        PlantModel = get_model_for_table(table_name, DATABASE_URL)
+        engine = create_engine(DATABASE_URL)
+        Session = sessionmaker(bind=engine)
+        session = Session()
+
+        records = session.query(PlantModel).all()
+        if not records:
+            return jsonify({"error": f"No records found in table '{table_name}'"}), 404
+
+        # Konverter til DataFrame
+        df = pd.DataFrame([record.to_dict() for record in records])
+        x = df.drop([target_measure], axis=1)
+        y = df[target_measure]
+
+        X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=test_size, random_state=random_state)
+
+        # Argumenter til træningsfunktion
+        args = {
+            'trainningData': df,
+            'targetMeasure': target_measure,
+            'testSize': test_size,
+            'randomState': random_state,
+            'model_type': model_type,
+            'estimators': estimators,
+            'max_depth': max_depth,
+            'solver': solver,
+            'penalty': penalty,
+            'C': C,
+            'max_iter': max_iter
+        }
+
         clf, metrics = train_model(**args)
 
-        #Gem modellen med type i navnet
+        # Gem modellen
         filename = save_model_to_folder(clf, f"{model_name}_{model_type}", "TrainedModels")
 
         return jsonify({
@@ -155,16 +166,16 @@ def train():
             "model_name": filename,
             "evaluation_metrics": metrics
         }), 200
+
     except HTTPException:
         raise
     except Exception as e:
         app.logger.error(f"Error in /train: {str(e)}")
-        return jsonify({
-            "error": str(e)
-        }), 500
+        return jsonify({"error": str(e)}), 500
     finally:
-        if session is not None:
+        if session:
             session.close()
+
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
