@@ -13,10 +13,10 @@ import os
 # Function to train the model (Random Forest or Logistic Regression)
 def train_model(**args):
    ##Dispatch to train_rfc or train_lr based on args['model_type'].
-   df = args.get('trainning_data')
-   target_measure = args.get('target_measure')
-   test_size = args.get('test_size')
-   random_state = args.get('random_state')
+   df = args.get('trainningData')
+   target_measure = args.get('targetMeasure')
+   test_size = args.get('testSize')
+   random_state = args.get('randomState')
    model_type = args.get('model_type')
 
    if model_type == 'random_forest':
@@ -80,7 +80,7 @@ def train_rfc(df,target_measure,test_size,random_state,n_estimators=100, max_dep
 
     #metrics
     metrics = {
-        'accuraxy': accuracy_score(y_test, pred),
+        'accuracy': accuracy_score(y_test, pred),
         'precesion': precision_score(y_test, pred,zero_division=0),
         'recall': recall_score(y_test, pred,zero_division=0),
         'f1': f1_score(y_test, pred,zero_division=0),
@@ -106,7 +106,7 @@ def train_lr(df,target_measure, test_size,random_state,solver='lbfgs',penalty='l
 
     #metrics
     metrics = {
-        'accuraxy': accuracy_score(y_test, pred),
+        'accuracy': accuracy_score(y_test, pred),
         'precesion': precision_score(y_test, pred,zero_division=0),
         'recall': recall_score(y_test, pred,zero_division=0),
         'f1': f1_score(y_test, pred,zero_division=0),
