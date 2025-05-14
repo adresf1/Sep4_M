@@ -72,21 +72,30 @@ def get_model_for_table(table_name, DATABASE_URL):
 @app.route('/train', methods=['POST'])
 def train():
     # Get the incoming JSON data from the request
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(silent=True)
 
-   #Validering af payload
-    missing = [f for f in ['model_name','table_name','targetMeasure','model_type'] if not data.get(f)]
+    if data is None:
+        return jsonify({"error": "No JSON data provided"}), 400
+
+    #Tvangs-felter: model_name, table_name, target_measure, model_type
+    #Accepter både camelCase og snake_case
+    model_name = data.get('model_name')
+    table_name = data.get('table_name')
+    target_measure = data.get('targetMeasure') or data.get('target_measure')
+    model_type = data.get('model_type', 'random_forest') #default til random_forest
+
+    #check missing fields
+    missing = [k for k in ['model_name', 'table_name', 'target_measure'] if not locals()[k]]
+    #model_type har defualt værdi, så den skal ikke checkes
     if missing:
-        return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
-    #Model-type validering + mapping
+        return jsonify({"error": f"Missing required fields: {', '.join(missing)}"}), 400
+    
+    # Model-type validering + mapping
     model_type = data.get('model_type', '').lower()
     model_type = SHORTCUT_MAP.get(model_type, model_type)
     if model_type not in ALLOWED_MODEL_TYPES:
         return jsonify({"error": f"invalid model type '{model_type}'. Allowed types are: {', '.join(ALLOWED_MODEL_TYPES)}"}), 400
     #Hent parametre fra payload
-    model_name = data.get('model_name')
-    table_name = data.get('table_name')
-    target_measure = data.get('targetMeasure')
     test_size = float(data.get('testSize', 0.2))
     random_state = int(data.get('randomState', 42))
     #RFC parametre
@@ -100,8 +109,8 @@ def train():
     C = float(data.get('C', 1.0))
     max_iter = int(data.get('max_iter', 1000))
 
-    #Database URL
-    DATABASE_URL = os.getenv('DATABASE_URL')
+    #Tillad Database URL payload eller brug miljøvariabel
+    DATABASE_URL = data.get('db_url') or os.getenv('DATABASE_URL')
     if not DATABASE_URL:
         return jsonify({"error": "DATABASE_URL not set in environment variables"}), 500
     #Indlæsning af ORM-model
