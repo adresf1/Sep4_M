@@ -1,11 +1,10 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from DataProcessing import create_app
+from DataProcessing import app
 
 print("Starting pytest.fixture.....")
 @pytest.fixture
 def client():
-    app = create_app()
     app.config['TESTING'] = True
     with app.test_client() as client:
         yield client
@@ -24,17 +23,25 @@ def test_get_plant_data_empty(client):
     print("\n🔍 Running test_get_plant_data_empty...")
 
     with patch('DataProcessing.create_plant_model') as mock_create_model, \
-         patch('DataProcessing.db.session.query') as mock_query:
-        print("✅ Patching create_plant_model and db.session.query to return no data")
-        mock_create_model.return_value = MagicMock()
-        mock_query.return_value.all.return_value = []  # Simulate 0 entries
+         patch('DataProcessing.get_engine_and_session') as mock_get_engine_session:
 
+        # Mock SQLAlchemy model
+        MockPlantModel = MagicMock()
+        mock_create_model.return_value = MockPlantModel
+
+        # Mock session and query
+        mock_session = MagicMock()
+        mock_session.query.return_value.all.return_value = []
+
+        # Return mocked engine and session
+        mock_get_engine_session.return_value = (MagicMock(), mock_session)
+
+        # Call endpoint
         response = client.get('/DemoDataRaw')
-        print(f"📥 Response status code: {response.status_code}")
-        data = response.get_json()
-        print(f"📦 Response data: {data}")
 
+        # Assertions
         assert response.status_code == 200
+        data = response.get_json()
         assert isinstance(data, list)
         assert len(data) == 0
         print("✅ test_get_plant_data_empty passed.")
