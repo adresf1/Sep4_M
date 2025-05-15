@@ -1,4 +1,5 @@
 import pytest
+from DemoData import create_plant_model, calculate_column_averages, create_preprocessed_plant_model, one_hot_encode_columns, copy_to_preprocessed
 from unittest.mock import patch, MagicMock
 from DataProcessing import app
 

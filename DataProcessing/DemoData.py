@@ -56,8 +56,7 @@ def create_preprocessed_plant_model(table_name):
 
     return PlantPreprocessed
 
-def calculate_column_averages(db, model, column_names):
-    session = db.session
+def calculate_column_averages(session, model, column_names):
     try:
         averages = {}
 
@@ -70,7 +69,7 @@ def calculate_column_averages(db, model, column_names):
                 avg = sum(clean_values) / len(clean_values)
                 averages[col_name] = avg
             else:
-                averages[col_name] = None  # Or raise exception if preferred
+                averages[col_name] = None
 
         return averages
 
@@ -116,7 +115,7 @@ def one_hot_encode_columns(raw):
 
     return encoded
 
-def copy_to_preprocessed(original_row, encoded_values, averages, db, PlantPreprocessed):
+def copy_to_preprocessed(original_row, encoded_values, averages, session, PlantPreprocessed):
     # Create new preprocessed record
     preprocessed_row = PlantPreprocessed(
         soil_loam=encoded_values["soil_loam"],
@@ -128,13 +127,13 @@ def copy_to_preprocessed(original_row, encoded_values, averages, db, PlantPrepro
         fertilizer_chemical=encoded_values["fertilizer_chemical"],
         fertilizer_none=encoded_values["fertilizer_none"],
         fertilizer_organic=encoded_values["fertilizer_organic"],
-        
-        # Copy the original numeric fields
+
+        # Original numeric fields
         sunlight_hours=original_row.sunlight_hours,
         temperature=original_row.temperature,
         humidity=original_row.humidity,
-        
-        # Copy the growth milestone
+
+        # Growth milestone
         growth_milestone=original_row.growth_milestone
     )
 
@@ -145,7 +144,7 @@ def copy_to_preprocessed(original_row, encoded_values, averages, db, PlantPrepro
         preprocessed_row.humidity_quadratic = (original_row.humidity - averages['humidity']) ** 2
 
     # Add to the session and commit
-    db.session.add(preprocessed_row)
-    db.session.commit()
+    session.add(preprocessed_row)
+    session.commit()
 
     return preprocessed_row

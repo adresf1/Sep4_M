@@ -211,13 +211,19 @@ def fetch_sensor_data():
 #======================== DemoData Endpoints, CRUD  ===========================
 @app.route('/DemoDataRaw/<int:id>', methods=['GET'])
 def get_single_plant_data(id):
+    DATABASE_URL = os.getenv('DATABASE_URL')
+    if not DATABASE_URL:
+        return jsonify({'error': 'Missing DATABASE_URL'}), 500
+
+    session = None
     try:
         if id < 1:
             return jsonify({'error': 'Invalid ID'}), 400
 
+        engine, session = get_engine_and_session(DATABASE_URL)
         PlantDataTest = create_plant_model('plant_data_test')
-        entry = db.session.get(PlantDataTest, id)
 
+        entry = session.get(PlantDataTest, id)
         if entry is None:
             return jsonify({'error': f'Entry with id {id} not found'}), 404
 
@@ -237,11 +243,23 @@ def get_single_plant_data(id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+    finally:
+        if session:
+            session.close()
+
+
 @app.route('/DemoDataRaw', methods=['GET'])
 def get_plant_data():
+    DATABASE_URL = os.getenv('DATABASE_URL')
+    if not DATABASE_URL:
+        return jsonify({'error': 'Missing DATABASE_URL'}), 500
+
+    session = None
     try:
+        engine, session = get_engine_and_session(DATABASE_URL)
         PlantDataTest = create_plant_model('plant_data_test')
-        data = db.session.query(PlantDataTest).all()
+
+        data = session.query(PlantDataTest).all()
         results = []
 
         for d in data:
@@ -260,9 +278,20 @@ def get_plant_data():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+    finally:
+        if session:
+            session.close()
+
+
 @app.route('/DemoDataRaw', methods=['POST'])
 def add_plant_data():
+    DATABASE_URL = os.getenv('DATABASE_URL')
+    if not DATABASE_URL:
+        return jsonify({'error': 'Missing DATABASE_URL'}), 500
+
+    session = None
     try:
+        engine, session = get_engine_and_session(DATABASE_URL)
         PlantDataTest = create_plant_model('plant_data_test')
         data = request.get_json()
 
@@ -276,8 +305,8 @@ def add_plant_data():
             growth_milestone=data['growth_milestone']
         )
 
-        db.session.add(new_entry)
-        db.session.commit()
+        session.add(new_entry)
+        session.commit()
 
         return jsonify({
             "message": "Data added successfully!",
@@ -285,21 +314,31 @@ def add_plant_data():
         }), 201
 
     except Exception as e:
-        db.session.rollback()
+        if session:
+            session.rollback()
         return jsonify({'error': str(e)}), 500
+
+    finally:
+        if session:
+            session.close()
 
 
 @app.route('/DemoDataRaw/<int:id>', methods=['POST'])
 def update_plant_data(id):
+    DATABASE_URL = os.getenv('DATABASE_URL')
+    if not DATABASE_URL:
+        return jsonify({'error': 'Missing DATABASE_URL'}), 500
+
+    session = None
     try:
-        # Validate ID
         if id < 1:
             return jsonify({'error': 'Invalid ID'}), 400
 
+        engine, session = get_engine_and_session(DATABASE_URL)
         PlantDataTest = create_plant_model('plant_data_test')
         data = request.get_json()
 
-        # Strict type validation (excluding bools for numeric fields)
+        # Type checks (same as original)
         if 'soil_type' in data and not isinstance(data['soil_type'], str):
             return jsonify({'error': 'Invalid data type for soil_type'}), 400
         if 'sunlight_hours' in data and (
@@ -323,12 +362,11 @@ def update_plant_data(id):
         ):
             return jsonify({'error': 'Invalid data type for growth_milestone'}), 400
 
-        # Fetch the entry by ID
-        entry = db.session.get(PlantDataTest, id)
+        entry = session.get(PlantDataTest, id)
         if entry is None:
             return jsonify({'error': f'Entry with id {id} not found'}), 404
 
-        # Update fields
+        # Apply updates
         entry.soil_type = data.get('soil_type', entry.soil_type)
         entry.sunlight_hours = data.get('sunlight_hours', entry.sunlight_hours)
         entry.water_frequency = data.get('water_frequency', entry.water_frequency)
@@ -337,42 +375,63 @@ def update_plant_data(id):
         entry.humidity = data.get('humidity', entry.humidity)
         entry.growth_milestone = data.get('growth_milestone', entry.growth_milestone)
 
-        db.session.commit()
+        session.commit()
         return jsonify({'message': f'Entry with id {id} updated successfully'}), 200
 
     except Exception as e:
-        db.session.rollback()
+        if session:
+            session.rollback()
         return jsonify({'error': str(e)}), 500
+
+    finally:
+        if session:
+            session.close()
 
 
 @app.route('/DemoDataRaw/<int:id>', methods=['DELETE'])
 def delete_plant_data(id):
+    DATABASE_URL = os.getenv('DATABASE_URL')
+    if not DATABASE_URL:
+        return jsonify({'error': 'Missing DATABASE_URL'}), 500
+
+    session = None
     try:
+        engine, session = get_engine_and_session(DATABASE_URL)
         PlantDataTest = create_plant_model('plant_data_test')
         
-        # Find the entry by ID
-        entry = db.session.get(PlantDataTest, id)
-
+        entry = session.get(PlantDataTest, id)
         if entry is None:
             return jsonify({'error': f'Entry with id {id} not found'}), 404
 
-        db.session.delete(entry)
-        db.session.commit()
+        session.delete(entry)
+        session.commit()
 
         return jsonify({'message': f'Entry with id {id} deleted successfully'}), 200
 
     except Exception as e:
-        db.session.rollback()
+        if session:
+            session.rollback()
         return jsonify({'error': str(e)}), 500
+
+    finally:
+        if session:
+            session.close()
+
 
 @app.route('/DemoDataRaw/unique-values', methods=['GET'])
 def get_unique_plant_data_fields():
+    DATABASE_URL = os.getenv('DATABASE_URL')
+    if not DATABASE_URL:
+        return jsonify({'error': 'Missing DATABASE_URL'}), 500
+
+    session = None
     try:
+        engine, session = get_engine_and_session(DATABASE_URL)
         PlantDataTest = create_plant_model('plant_data_test')
 
-        unique_soil_types = [row[0] for row in db.session.query(distinct(PlantDataTest.soil_type)).all()]
-        unique_water_freqs = [row[0] for row in db.session.query(distinct(PlantDataTest.water_frequency)).all()]
-        unique_fertilizers = [row[0] for row in db.session.query(distinct(PlantDataTest.fertilizer_type)).all()]
+        unique_soil_types = [row[0] for row in session.query(distinct(PlantDataTest.soil_type)).all()]
+        unique_water_freqs = [row[0] for row in session.query(distinct(PlantDataTest.water_frequency)).all()]
+        unique_fertilizers = [row[0] for row in session.query(distinct(PlantDataTest.fertilizer_type)).all()]
 
         return jsonify({
             "soil_types": unique_soil_types,
@@ -383,6 +442,9 @@ def get_unique_plant_data_fields():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+    finally:
+        if session:
+            session.close()
 
 #======================== Preprocess Endpoint  ===========================
 
