@@ -10,9 +10,56 @@ import os
 from dotenv import load_dotenv, find_dotenv, dotenv_values
 from DemoData import create_plant_model, calculate_column_averages, create_preprocessed_plant_model, one_hot_encode_columns, copy_to_preprocessed
 from sqlalchemy import distinct
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, Integer, Float, String, Boolean
+from dotenv import load_dotenv
+load_dotenv()
 
-db = SQLAlchemy()
+app = Flask(__name__)
+_model_cache = {}
 
+
+def get_model_for_table(table_name : str, engine):
+    if table_name not in _model_cache:
+        if table_name == 'sensor_data':
+            class SensorData(Base):
+                __tablename__ = 'sensor_data'
+                id = Column(Integer, primary_key=True)
+                air_temperature = Column(Float)
+                air_humidity = Column(Float)
+                soil_moisture = Column(Float)
+                light = Column(Float)
+                light_type = Column(String)
+                light_max = Column(Float)
+                light_min = Column(Float)
+                artificial_light = Column(Boolean)
+                light_avg = Column(Float)
+                distance_to_height = Column(Float)
+                water = Column(Float)
+                time_since_last_watering = Column(Float)
+                water_amount = Column(Float)
+                watering_frequency = Column(Float)
+                timestamp = Column(String)
+                soil_type = Column(String)
+                fertilizer_type = Column(String)
+                experiment_number = Column(Integer)
+                light_variation = Column(Float)
+                water_need_score = Column(Float)
+
+                def to_dict(self):
+                    return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+            _model_cache[table_name] = SensorData
+
+        else:
+            raise ValueError(f"No manual schema defined for table '{table_name}'.")
+
+    return _model_cache[table_name]
+
+def get_engine_and_session(DATABASE_URL):
+    engine = create_engine(DATABASE_URL)
+    Session = sessionmaker(bind=engine)
+    return engine, Session()
 
 def create_app():
     print("📦 Initializing application...")
@@ -56,18 +103,21 @@ def create_app():
 
 print("Db connection started...")
 
-app = create_app()
-
 @app.route('/fetch-sensor-data', methods=['POST'])
 def post_sensor_data():
-    try:
-        data = request.get_json()
+    DATABASE_URL = os.getenv('DATABASE_URL')
+    if not DATABASE_URL:
+        return jsonify({'error': 'Missing DATABASE_URL'}), 500
 
-        if not isinstance(data, list):
+    try:
+        payload = request.get_json()
+        if not isinstance(payload, list):
             return jsonify({'error': 'Expected a list of sensor data'}), 400
 
-        for entry in data:
-            # Beregninger:
+        engine, session = get_engine_and_session(DATABASE_URL)
+        SensorData = get_model_for_table('sensor_data')
+
+        for entry in payload:
             light_max = entry.get('light_max', 0)
             light_min = entry.get('light_min', 0)
             time_since_last = entry.get('time_since_last_watering', 0)
@@ -98,19 +148,30 @@ def post_sensor_data():
                 light_variation=light_variation,
                 water_need_score=water_need_score
             )
+            session.add(sensor)
 
-            db.session.add(sensor)
-
-        db.session.commit()
+        session.commit()
         return jsonify({'status': 'Data saved successfully'}), 201
 
     except Exception as e:
+        session.rollback()
         return jsonify({'error': str(e)}), 500
+
+    finally:
+        session.close()
     
 @app.route('/fetch-sensor-data', methods=['GET'])
 def fetch_sensor_data():
+    DATABASE_URL = os.getenv('DATABASE_URL')
+    if not DATABASE_URL:
+        return jsonify({'error': 'Missing DATABASE_URL'}), 500
+
+    session = None
     try:
-        data = SensorData.query.all()
+        engine, session = get_engine_and_session(DATABASE_URL)
+        SensorData = get_model_for_table('sensor_data')
+
+        data = session.query(SensorData).all()
         results = []
 
         for d in data:
@@ -139,9 +200,13 @@ def fetch_sensor_data():
             })
 
         return jsonify(results), 200
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+    finally:
+        if session:
+            session.close()
 
 #======================== DemoData Endpoints, CRUD  ===========================
 @app.route('/DemoDataRaw/<int:id>', methods=['GET'])
@@ -370,35 +435,5 @@ def preprocess_data():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app = create_app()
+    #app = create_app()
     app.run(host='0.0.0.0', port=5000)
-
-class SensorData(db.Model):
-    __tablename__ = 'sensor_data'
-
-    id = db.Column(db.Integer, primary_key=True)
-    air_temperature = db.Column(db.Float)
-    air_humidity = db.Column(db.Float)
-    soil_moisture = db.Column(db.Float)
-    light = db.Column(db.Float)
-    light_type = db.Column(db.String)
-    light_max = db.Column(db.Float)
-    light_min = db.Column(db.Float)
-    artificial_light = db.Column(db.Boolean)
-    light_avg = db.Column(db.Float)
-    distance_to_height = db.Column(db.Float)
-    water = db.Column(db.Float)
-    time_since_last_watering = db.Column(db.Float)
-    water_amount = db.Column(db.Float)
-    watering_frequency = db.Column(db.Float)
-    timestamp = db.Column(db.String)
-    soil_type = db.Column(db.String)
-    fertilizer_type = db.Column(db.String)
-    experiment_number = db.Column(db.Integer)
-    
-    # Calculated figures
-    light_variation = db.Column(db.Float)
-    water_need_score = db.Column(db.Float)
-
-with app.app_context():
-    db.create_all()
