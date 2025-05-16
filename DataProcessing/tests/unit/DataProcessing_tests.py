@@ -1,12 +1,16 @@
 import unittest
 from unittest.mock import Mock
-
+import sys
+import os
 import flask_sqlalchemy.extension
 import pytest
-import mock
 from flask_sqlalchemy import SQLAlchemy
 from mock_alchemy.mocking import UnifiedAlchemyMagicMock
+# Add the DataProcessing/ directory to the path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+
 from DataProcessing import DataProcessing
+from DemoData import get_model_for_table, create_plant_model, create_preprocessed_plant_model, create_sensor_data_model
 import json
 
 class TestDataProcessing():

@@ -17,7 +17,6 @@ from pathlib import Path
 
 
 app = Flask(__name__)
-_model_cache = {}
 
 
 def get_engine_and_session(DATABASE_URL):
