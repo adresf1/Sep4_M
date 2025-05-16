@@ -31,11 +31,19 @@ public class PredictionController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<string>> GetModels()
     {
-        List<PredictionModel> models = new List<PredictionModel>()
+        string endpoint = _endpoint + "models";
+        var response = await _httpClient.GetAsync(endpoint);
+
+        if (response.IsSuccessStatusCode)
         {
-            new PredictionModel("rfc","RandomForestRegressor.joblib")
-        };
-        return JsonConvert.SerializeObject(models);
+            return await response.Content.ReadAsStringAsync();
+        }
+        else
+        {
+            string error = $"{response.StatusCode}: Failed to get models: {await response.Content.ReadAsStringAsync()}";
+            Console.WriteLine(error);
+            return error;
+        }
     }
 
     
@@ -84,6 +92,9 @@ public class PredictionController : ControllerBase
         }
     }
 
+
+
+   
 
 
 
