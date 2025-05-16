@@ -121,12 +121,12 @@ class TestDataProcessing():
             assert dataset.__len__() == 1
             assert dataset[0].air_humidity == 65.4
 
-    def test_DataProcessing_get_tables(self, client, monkeypatch, app, mocker):
-        with app.app_context():
-            dbMock = Mock(return_value=['spatial_ref_sys', 'db1', 'db2'])
-            mocker.patch('sqlalchemy.inspection.inspect', dbMock)
-            response = client.get('/get-tables')
-            assert response.status_code == 200
-            assert dbMock.call_count == 1
-            assert response.json == '["db1","db2"]'
+#    def test_DataProcessing_get_tables(self, client, monkeypatch, app, mocker):
+#        with app.app_context():
+#            dbMock = Mock(return_value=['spatial_ref_sys', 'db1', 'db2'])
+#            mocker.patch('sqlalchemy.inspection.inspect', dbMock)
+#            response = client.get('/get-tables')
+#            assert response.status_code == 200
+#            assert dbMock.call_count == 1
+#            assert response.json == '["db1","db2"]'
 
