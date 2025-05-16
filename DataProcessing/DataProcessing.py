@@ -4,6 +4,7 @@
 
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import inspect
 import math
 import os
 from dotenv import load_dotenv
@@ -128,6 +129,17 @@ def fetch_sensor_data():
             })
 
         return jsonify(results), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/get-tables', methods=['GET'])
+def get_tables():
+    try:
+        ins = inspect(db.engine)
+        tables = ins.get_table_names()
+        # Remove system table
+        tables.remove('spatial_ref_sys')
+        return jsonify(tables), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

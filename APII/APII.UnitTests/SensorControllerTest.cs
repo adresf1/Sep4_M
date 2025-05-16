@@ -1,11 +1,10 @@
 ﻿using APII;
 using APII.Controllers;
 using APII.Models;
-using NSubstitute;
 using System.Net;
+using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
-using NSubstitute.ClearExtensions;
-using Moq;
+using RichardSzalay.MockHttp;
 
 namespace APII.UnitTests;
 
@@ -13,15 +12,14 @@ public class SensorControllerTest
 {
     private HttpClient _mockedClient;
     private SensorController _sensorController;
-    private Mock<HttpClient> _moqedClient;
+    private MockHttpMessageHandler _mockedHandler;
     private SensorData _demoData;
     
     [SetUp]
     public void Setup()
     {
-        _mockedClient = Substitute.For<HttpClient>();
-        _moqedClient = new Mock<HttpClient>();
-        _sensorController = new SensorController(_mockedClient);
+        _mockedHandler = new MockHttpMessageHandler();
+        _sensorController = new SensorController(_mockedHandler.ToHttpClient());
         _demoData = new SensorData()
         {
             ExperimentNumber = 0,
@@ -48,29 +46,26 @@ public class SensorControllerTest
     }
 
     [Test]
-    public void TestGetSensors()
+    public async Task TestGetSensors()
     {
         List<SensorData> sensors = new List<SensorData>()
         {
             _demoData
         };
         string resultPayload = JsonConvert.SerializeObject(sensors);
-        /*_moqedClient.Setup(x =>
-            x.GetStringAsync("http://Sep4-DataProcessing-Service:5000/fetch-sensor-data"))
-                .Returns(Task.FromResult(resultPayload));
-        var response = _sensorController.GetSensors().Result;
-        Assert.Equals(response, resultPayload);*/
-        _mockedClient.GetStringAsync("").ReturnsForAnyArgs(Task.FromResult(resultPayload));
-        var sensorResult = _sensorController.GetSensors().Result;
 
-        _mockedClient.Received(1).GetStringAsync("http://Sep4-DataProcessing-Service:5000/fetch-sensor-data");
-        Assert.That(_mockedClient.ReceivedCalls().Count(), Is.EqualTo(1));
-        Assert.That(JsonConvert.SerializeObject(sensorResult.Value), Is.EqualTo(resultPayload));
-        _mockedClient.ClearSubstitute();
+        var req = _mockedHandler.When(method: HttpMethod.Get, "http://Sep4-DataProcessing-Service:5000/fetch-sensor-data")
+            .Respond("application/json", resultPayload);
+        
+        var response = await _sensorController.GetSensors();
+        var result = ((OkObjectResult)response.Result).Value;
+        Assert.That(_mockedHandler.GetMatchCount(req), Is.EqualTo(1));
+        Assert.That(JsonConvert.SerializeObject(result), Is.EqualTo(resultPayload));
+        _mockedHandler.Clear();
     }
 
     [Test]
-    public void TestPostSensorData()
+    public async Task TestPostSensorData()
     {
         var payload = new PostSensorData()
         {
@@ -93,33 +88,39 @@ public class SensorControllerTest
             SoilType = "Loam",
             FertilizerType = "Organic"
         };
-        var mockResult = new HttpResponseMessage() {StatusCode = HttpStatusCode.OK, Content = new StringContent("")};
-        _mockedClient.PostAsync((string)default, default).ReturnsForAnyArgs(mockResult);
-
-        var result = _sensorController.PostSensorData(payload).Result;
-        Assert.That(_mockedClient.ReceivedCalls().Count(), Is.EqualTo(1));
-        Assert.That(result.Value, Is.EqualTo("Sensor data sent successfully."));
+        
+        var req = _mockedHandler.When(method: HttpMethod.Post, "http://Sep4-DataProcessing-Service:5000/fetch-sensor-data")
+            .Respond("application/json", JsonConvert.SerializeObject("Sensor data sent successfully."));
+        
+        var response = await _sensorController.PostSensorData(payload);
+        var result = ((OkObjectResult)response.Result).Value;
+        Assert.That(_mockedHandler.GetMatchCount(req), Is.EqualTo(1));
+        Assert.That(result, Is.EqualTo("Sensor data sent successfully."));
         
         // Cleanup
-        _mockedClient.ClearSubstitute();
+        _mockedHandler.Clear();
     }
 
     [Test]
-    public void TestGetModel()
+    public async Task TestGetModel()
     {
         string json = "[{\"TypeOfModel\":\"rfc\",\"NameOfModel\":\"RandomForestRegressor.joblib\"}]";
         
-        var models = _sensorController.GetModel().Result;
+        var req = _mockedHandler.When(method: HttpMethod.Get, "http://Sep4-ML-Service:8080/api/prediction")
+            .Respond("application/json", json);
         
-        Assert.That(_mockedClient.ReceivedCalls().Count(), Is.EqualTo(0));
-        Assert.That(models.Value == json);
+        var response = await _sensorController.GetModel();
+        var result = ((OkObjectResult)response.Result).Value;
+        
+        Assert.That(_mockedHandler.GetMatchCount(req), Is.EqualTo(1));
+        Assert.That(result, Is.EqualTo(json));
         
         // Cleanup
-        _mockedClient.ClearSubstitute();
+        _mockedHandler.Clear();
     }
 
     [Test]
-    public void TestPostPrediction()
+    public async Task TestPostPrediction()
     {
         PredictionInput req = new PredictionInput()
         {
@@ -138,21 +139,42 @@ public class SensorControllerTest
 
         // Configure Mock
         string resultPayload = JsonConvert.SerializeObject(new double[] {50.2, 49.8});
-        var mockResult = new HttpResponseMessage() {StatusCode = HttpStatusCode.OK, Content = new StringContent(resultPayload)};
-        _mockedClient.PostAsync((string?)default, default).ReturnsForAnyArgs(mockResult);
+        var request = _mockedHandler.When(method: HttpMethod.Post, "http://Sep4-ML-Service:8080/api/prediction/predict")
+            .Respond("application/json", resultPayload);
         
-        var prediction = _sensorController.PredictUnified().Result;
+        var response = await _sensorController.PredictUnified(JsonConvert.SerializeObject(req));
+        var result = ((OkObjectResult)response.Result).Value;
         
-        Assert.That(_mockedClient.ReceivedCalls().Count(), Is.EqualTo(1));
-        //Assert.That(prediction, Is.EqualTo(resultPayload));
+        Assert.That(_mockedHandler.GetMatchCount(request), Is.EqualTo(1));
+        Assert.That(result, Is.EqualTo(resultPayload));
         
         // Cleanup
-        _mockedClient.ClearSubstitute();
+        _mockedHandler.Clear();
+    }
+
+    [Test]
+    public async Task TestGetTables()
+    {
+        List<string> tables = new List<string>()
+        {
+            "db1",
+            "db2"
+        };
+        string resultPayload = JsonConvert.SerializeObject(tables);
+        
+        var req = _mockedHandler.When(method: HttpMethod.Get, "http://Sep4-DataProcessing-Service:5000/get-tables")
+            .Respond("application/json", resultPayload);
+        
+        var response = await _sensorController.GetTables();
+        var result = ((OkObjectResult)response.Result).Value;
+        Assert.That(_mockedHandler.GetMatchCount(req), Is.EqualTo(1));
+        Assert.That(JsonConvert.SerializeObject(result), Is.EqualTo(resultPayload));
+        _mockedHandler.Clear();
     }
     
     [TearDown]
     public void TearDown()
     {
-        _mockedClient.Dispose();
+        _mockedHandler.Dispose();
     }
 }

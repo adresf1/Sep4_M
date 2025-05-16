@@ -26,7 +26,7 @@ public class SensorController : ControllerBase
         _httpClient = httpClient;
     }
 
-  
+
 
     // GET: api/sensors
     [HttpGet]
@@ -86,68 +86,83 @@ public class SensorController : ControllerBase
         }
     }
 
-   [HttpPost("predict")]
-public async Task<IActionResult> PredictUnified()
-{
-    try
+    [HttpPost("predict")]
+    public async Task<ActionResult<string>> PredictUnified([FromBody] string body)
     {
-        using var reader = new StreamReader(Request.Body);
-        var body = await reader.ReadToEndAsync();
-
-        if (string.IsNullOrWhiteSpace(body))
-            return BadRequest("Request body is empty.");
-
-        JObject jsonObj;
         try
         {
-            jsonObj = JObject.Parse(body);
+            //using var reader = new StreamReader(Request.Body);
+            //var body = await reader.ReadToEndAsync();
+
+            if (string.IsNullOrWhiteSpace(body))
+                return BadRequest("Request body is empty.");
+
+            JObject jsonObj;
+            try
+            {
+                jsonObj = JObject.Parse(body);
+            }
+            catch (JsonReaderException jex)
+            {
+                return BadRequest($"Invalid JSON format: {jex.Message}");
+            }
+
+            var typeOfModel = jsonObj["TypeofModel"]?.ToString();
+            if (string.IsNullOrWhiteSpace(typeOfModel))
+                return BadRequest("Missing 'TypeofModel' in request body.");
+
+            string targetUrl;
+            StringContent content;
+
+            if (typeOfModel.Equals("logistic", StringComparison.OrdinalIgnoreCase))
+            {
+                var logisticRequest = jsonObj.ToObject<LogisticPredictionRequest>();
+                var json = JsonConvert.SerializeObject(logisticRequest);
+                content = new StringContent(json, Encoding.UTF8, "application/json");
+                targetUrl = $"{_mlServiceUrl}/predict";
+            }
+            else if (typeOfModel.Equals("rfc", StringComparison.OrdinalIgnoreCase))
+            {
+                var rfcRequest = jsonObj.ToObject<Rfc_PredictionRequest>();
+                var json = JsonConvert.SerializeObject(rfcRequest);
+                content = new StringContent(json, Encoding.UTF8, "application/json");
+                targetUrl = $"{_mlServiceUrl}/predict"; // default is RFC
+            }
+            else
+            {
+                return BadRequest("Unsupported TypeofModel. Use 'logistic' or 'rfc'.");
+            }
+
+            var response = await _httpClient.PostAsync(targetUrl, content);
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                return Ok(responseContent);
+            }
+
+            return BadRequest($"Prediction failed: {responseContent}");
         }
-        catch (JsonReaderException jex)
+        catch (Exception ex)
         {
-            return BadRequest($"Invalid JSON format: {jex.Message}");
+            return BadRequest($"Error during prediction: {ex.Message}");
         }
-
-        var typeOfModel = jsonObj["TypeofModel"]?.ToString();
-        if (string.IsNullOrWhiteSpace(typeOfModel))
-            return BadRequest("Missing 'TypeofModel' in request body.");
-
-        string targetUrl;
-        StringContent content;
-
-        if (typeOfModel.Equals("logistic", StringComparison.OrdinalIgnoreCase))
-        {
-            var logisticRequest = jsonObj.ToObject<LogisticPredictionRequest>();
-            var json = JsonConvert.SerializeObject(logisticRequest);
-            content = new StringContent(json, Encoding.UTF8, "application/json");
-            targetUrl = $"{_mlServiceUrl}/predict";
-        }
-        else if (typeOfModel.Equals("rfc", StringComparison.OrdinalIgnoreCase))
-        {
-            var rfcRequest = jsonObj.ToObject<Rfc_PredictionRequest>();
-            var json = JsonConvert.SerializeObject(rfcRequest);
-            content = new StringContent(json, Encoding.UTF8, "application/json");
-            targetUrl = $"{_mlServiceUrl}/predict"; // default is RFC
-        }
-        else
-        {
-            return BadRequest("Unsupported TypeofModel. Use 'logistic' or 'rfc'.");
-        }
-
-        var response = await _httpClient.PostAsync(targetUrl, content);
-        var responseContent = await response.Content.ReadAsStringAsync();
-
-        if (response.IsSuccessStatusCode)
-        {
-            return Ok(responseContent);
-        }
-
-        return BadRequest($"Prediction failed: {responseContent}");
     }
-    catch (Exception ex)
+
+    [HttpGet("get-tables")]
+    public async Task<ActionResult<IEnumerable<string>>> GetTables()
     {
-        return BadRequest($"Error during prediction: {ex.Message}");
+        try
+        {
+            var response =
+                await _httpClient.GetStringAsync(
+                    $"{_pythonServiceUrl[..(_pythonServiceUrl.LastIndexOf('/'))]}/get-tables");
+            var tables = JsonConvert.DeserializeObject<List<string>>(response);
+            return Ok(tables);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest($"Error retrieving table data: {ex.Message}");
+        }
     }
 }
-
-}
-        
