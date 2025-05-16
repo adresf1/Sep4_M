@@ -1,40 +1,36 @@
 ﻿using MLService.Controllers;
-using NSubstitute;
 using System.Net;
 using MLService.Models.Prediction;
 using Newtonsoft.Json;
-using NSubstitute.ClearExtensions;
+using RichardSzalay.MockHttp;
+using Microsoft.AspNetCore.Mvc;
 
 namespace MLService.UnitTests;
 
 public class PredictionControllerTest
 {
     private PredictionController _predictionController;
-    private HttpClient _mockedClient;
+    private MockHttpMessageHandler _mockedHandler;
     
     [SetUp]
     public void Setup()
     {
-        _mockedClient = Substitute.For<HttpClient>();
-        _predictionController = new PredictionController(_mockedClient);
+        _mockedHandler = new MockHttpMessageHandler();
+        _predictionController = new PredictionController(_mockedHandler.ToHttpClient());
     }
 
     [Test]
-    public void GetModels()
+    public async Task GetModels()
     {
         string json = "[{\"TypeOfModel\":\"rfc\",\"NameOfModel\":\"RandomForestRegressor.joblib\"}]";
         
         var models = _predictionController.GetModels().Result;
         
-        Assert.That(_mockedClient.ReceivedCalls().Count(), Is.EqualTo(0));
         Assert.That(models.Value == json);
-        
-        // Cleanup
-        _mockedClient.ClearSubstitute();
     }
 
     [Test]
-    public void ValidPrediction()
+    public async Task ValidPrediction()
     {
         PredictionRequest req = new PredictionRequest()
         {
@@ -53,21 +49,23 @@ public class PredictionControllerTest
 
         // Configure Mock
         string resultPayload = JsonConvert.SerializeObject(new double[] {50.2, 49.8});
-        var mockResult = new HttpResponseMessage() {StatusCode = HttpStatusCode.OK, Content = new StringContent(resultPayload)};
-        _mockedClient.PostAsync((string?)default, default).ReturnsForAnyArgs(mockResult);
         
-        var prediction = _predictionController.Predict(req).Result;
+        var request = _mockedHandler.When(method: HttpMethod.Post, "http://Sep4-ModelTraining-Service:5000/predict")
+            .Respond("application/json", resultPayload);
         
-        Assert.That(_mockedClient.ReceivedCalls().Count(), Is.EqualTo(1));
-        Assert.That(prediction.Value, Is.EqualTo(resultPayload));
+        var response = await _predictionController.Predict(JsonConvert.SerializeObject(req));
+        var result = response.Value;
+        
+        Assert.That(_mockedHandler.GetMatchCount(request), Is.EqualTo(1));
+        Assert.That(result, Is.EqualTo(resultPayload));
         
         // Cleanup
-        _mockedClient.ClearSubstitute();
+        _mockedHandler.Clear();
     }
 
     [TearDown]
     public void TearDown()
     {
-        _mockedClient.Dispose();
+        _mockedHandler.Dispose();
     }
 }

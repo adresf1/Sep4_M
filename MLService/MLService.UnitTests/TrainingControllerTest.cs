@@ -1,26 +1,26 @@
 using MLService.Controllers;
-using NSubstitute;
 using System.Net;
 using MLService.Models.Training;
 using Newtonsoft.Json;
-using NSubstitute.ClearExtensions;
+using RichardSzalay.MockHttp;
+using Microsoft.AspNetCore.Mvc;
 
 namespace MLService.UnitTests;
 
 public class TrainingControllerTest
 {
     private TrainingController _trainingController;
-    private HttpClient _mockedClient;
+    private MockHttpMessageHandler _mockedHandler;
     
     [SetUp]
     public void Setup()
     {
-        _mockedClient = Substitute.For<HttpClient>();
-        _trainingController = new TrainingController(_mockedClient);
+        _mockedHandler = new MockHttpMessageHandler();
+        _trainingController = new TrainingController(_mockedHandler.ToHttpClient());
     }
 
     [Test]
-    public void Training()
+    public async Task TestTraining()
     {
         TrainingPayload payload = new TrainingPayload()
         {
@@ -34,22 +34,29 @@ public class TrainingControllerTest
         
         // Setup mock
         string resultPayload = "{'status': 'success', 'message': 'RandomForest model trained successfully.', 'model_filename': 'testmodel.joblib', 'evaluation_metrics': ''}";
-        var mockResult = new HttpResponseMessage() {StatusCode = HttpStatusCode.OK, Content = new StringContent(resultPayload)};
-        _mockedClient.PostAsync((string?)default, default).ReturnsForAnyArgs(mockResult);
-        
-        var trainingResult = _trainingController.Train(payload).Result;
 
-        var calls = _mockedClient.ReceivedCalls();
-        Assert.That(_mockedClient.ReceivedCalls().Count(), Is.EqualTo(1));
-        Assert.That(trainingResult.Value, Is.EqualTo(resultPayload));
+        string endpoint;
+        if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
+            endpoint = "http://Sep4-API-Service:5000/train";
+        else
+            endpoint = "http://localhost:5010/train";
+        
+        var req = _mockedHandler.When(method: HttpMethod.Post, endpoint)
+            .Respond("application/json", resultPayload);
+        
+        var response = await _trainingController.Train(payload);
+        var result = response.Value;
+        
+        Assert.That(_mockedHandler.GetMatchCount(req), Is.EqualTo(1));
+        Assert.That(result, Is.EqualTo(resultPayload));
         
         // Cleanup
-        _mockedClient.ClearSubstitute();
+        _mockedHandler.Clear();
     }
     
     [TearDown]
     public void TearDown()
     {
-        _mockedClient.Dispose();
+        _mockedHandler.Dispose();
     }
 }
