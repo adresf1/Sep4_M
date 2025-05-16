@@ -8,98 +8,22 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 import math
 import os
 from dotenv import load_dotenv, find_dotenv, dotenv_values
-from DemoData import create_plant_model, calculate_column_averages, create_preprocessed_plant_model, one_hot_encode_columns, copy_to_preprocessed
-from sqlalchemy import distinct
+from DemoData import create_sensor_data_model, get_model_for_table, create_plant_model, calculate_column_averages, create_preprocessed_plant_model, one_hot_encode_columns, copy_to_preprocessed
+from sqlalchemy import distinct, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, Float, String, Boolean
 from dotenv import load_dotenv
-load_dotenv()
+from pathlib import Path
+
 
 app = Flask(__name__)
 _model_cache = {}
 
 
-def get_model_for_table(table_name : str, engine):
-    if table_name not in _model_cache:
-        if table_name == 'sensor_data':
-            class SensorData(Base):
-                __tablename__ = 'sensor_data'
-                id = Column(Integer, primary_key=True)
-                air_temperature = Column(Float)
-                air_humidity = Column(Float)
-                soil_moisture = Column(Float)
-                light = Column(Float)
-                light_type = Column(String)
-                light_max = Column(Float)
-                light_min = Column(Float)
-                artificial_light = Column(Boolean)
-                light_avg = Column(Float)
-                distance_to_height = Column(Float)
-                water = Column(Float)
-                time_since_last_watering = Column(Float)
-                water_amount = Column(Float)
-                watering_frequency = Column(Float)
-                timestamp = Column(String)
-                soil_type = Column(String)
-                fertilizer_type = Column(String)
-                experiment_number = Column(Integer)
-                light_variation = Column(Float)
-                water_need_score = Column(Float)
-
-                def to_dict(self):
-                    return {c.name: getattr(self, c.name) for c in self.__table__.columns}
-
-            _model_cache[table_name] = SensorData
-
-        else:
-            raise ValueError(f"No manual schema defined for table '{table_name}'.")
-
-    return _model_cache[table_name]
-
 def get_engine_and_session(DATABASE_URL):
     engine = create_engine(DATABASE_URL)
     Session = sessionmaker(bind=engine)
     return engine, Session()
-
-def create_app():
-    print("📦 Initializing application...")
-
-    #Load Enviorment file 
-    env_path = find_dotenv('../.env', raise_error_if_not_found=False)
-
-    env_values = dotenv_values(env_path)
-    if "DATABASE_URL" in env_values:
-        print(f"DATABASE_URL found in .env")
-    else:
-        print("DATABASE_URL not found in .env file contents.")
-
-    #db_url = env_values['DATABASE_URL']
-    # Fallback: check system environment if not in .env
-    db_url = env_values.get('DATABASE_URL') or os.getenv('DATABASE_URL')
-
-    # Print all loaded environment variables (useful for debugging in CI)
-    print("🔍 All environment variables:")
-    for key, value in os.environ.items():
-        if "DATABASE" in key:
-            print(f"🔑 {key} = {value}")
- 
-
-    if not db_url:
-        raise RuntimeError("❌ DATABASE_URL must be set in .env or as a system/CI environment variable.")
-    else:
-        print(f"✅ DATABASE_URL loaded: ")  # {db_url} <--- THIS will show the actual value
-
-    # Create and configure the Flask app
-    app = Flask(__name__)
-    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-    # Initialize database
-    db.init_app(app)
-    print("✅ App and database initialized")
-
-    return app
-
 
 print("Db connection started...")
 
@@ -109,12 +33,15 @@ def post_sensor_data():
     if not DATABASE_URL:
         return jsonify({'error': 'Missing DATABASE_URL'}), 500
 
+    session = None
     try:
         payload = request.get_json()
         if not isinstance(payload, list):
             return jsonify({'error': 'Expected a list of sensor data'}), 400
 
         engine, session = get_engine_and_session(DATABASE_URL)
+
+        # Use the cached model
         SensorData = get_model_for_table('sensor_data')
 
         for entry in payload:
@@ -126,6 +53,7 @@ def post_sensor_data():
             light_variation = light_max - light_min
             water_need_score = (100 - soil_moisture) * (time_since_last / 24)
 
+            # Create a new SensorData instance
             sensor = SensorData(
                 air_temperature=entry.get('air_temperature'),
                 air_humidity=entry.get('air_humidity'),
@@ -158,7 +86,8 @@ def post_sensor_data():
         return jsonify({'error': str(e)}), 500
 
     finally:
-        session.close()
+        if session:
+            session.close()
     
 @app.route('/fetch-sensor-data', methods=['GET'])
 def fetch_sensor_data():
@@ -169,6 +98,8 @@ def fetch_sensor_data():
     session = None
     try:
         engine, session = get_engine_and_session(DATABASE_URL)
+
+        # Use the cached model
         SensorData = get_model_for_table('sensor_data')
 
         data = session.query(SensorData).all()
@@ -217,6 +148,7 @@ def get_single_plant_data(id):
 
     session = None
     try:
+        #never reached as flask handles negative values 
         if id < 1:
             return jsonify({'error': 'Invalid ID'}), 400
 

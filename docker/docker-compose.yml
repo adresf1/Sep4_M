@@ -20,14 +20,12 @@ services:
     stdin_open: true
     tty: true
     networks:
-      - sep4-network
+      - SEP4-NETWORK
 
   Sep4-DataProcessing-Service:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-      args:
-        - DATABASE_URL
     ports:
       - "5000:5000"
     image: sep4-dataprocessing-env
@@ -38,9 +36,9 @@ services:
     tty: true
     environment:
       - PYTHONPATH=.
-      - DATABASE_URL=${DATABASE_URL}
+      - SQLALCHEMY_DATABASE_URI=${DATABASE_URL}
     networks:
-      - sep4-network
+      - SEP4-NETWORK
 
   Sep4-API-Service:
     build:
@@ -55,7 +53,7 @@ services:
     environment:
       - ASPNETCORE_URLS=http://+:8080
     networks:
-      - sep4-network
+      - SEP4-NETWORK
 
   Sep4-ML-Service:
     build:
@@ -70,8 +68,8 @@ services:
     environment:
       - ASPNETCORE_URLS=http://+:8080
     networks:
-      - sep4-network
+      - SEP4-NETWORK
 
 networks:
-  sep4-network:
+  SEP4-NETWORK:
     driver: bridge

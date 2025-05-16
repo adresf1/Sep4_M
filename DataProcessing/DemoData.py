@@ -1,7 +1,20 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, Integer, String, Float, Boolean
 
 Base = declarative_base()
+
+# Cache for table models
+_model_cache = {}
+
+def get_model_for_table(table_name: str):
+    # If the model is already in cache, return it
+    if table_name not in _model_cache:
+        if table_name == 'sensor_data':
+            _model_cache[table_name] = create_sensor_data_model()
+        else:
+            raise ValueError(f"No manual schema defined for table '{table_name}'.")
+
+    return _model_cache[table_name]
 
 def create_plant_model(table_name):
     class Plant(Base):
@@ -55,6 +68,37 @@ def create_preprocessed_plant_model(table_name):
         growth_milestone = Column(Integer)
 
     return PlantPreprocessed
+
+def create_sensor_data_model():
+    # Define the SensorData class
+    class SensorData(Base):
+        __tablename__ = 'sensor_data'
+        id = Column(Integer, primary_key=True)
+        air_temperature = Column(Float)
+        air_humidity = Column(Float)
+        soil_moisture = Column(Float)
+        light = Column(Float)
+        light_type = Column(String)
+        light_max = Column(Float)
+        light_min = Column(Float)
+        artificial_light = Column(Boolean)
+        light_avg = Column(Float)
+        distance_to_height = Column(Float)
+        water = Column(Float)
+        time_since_last_watering = Column(Float)
+        water_amount = Column(Float)
+        watering_frequency = Column(Float)
+        timestamp = Column(String)
+        soil_type = Column(String)
+        fertilizer_type = Column(String)
+        experiment_number = Column(Integer)
+        light_variation = Column(Float)
+        water_need_score = Column(Float)
+
+        def to_dict(self):
+            return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+    return SensorData
 
 def calculate_column_averages(session, model, column_names):
     try:
