@@ -24,9 +24,6 @@ public class PredictionControllerTest
     {
         string json = "[{\"TypeOfModel\":\"rfc\",\"NameOfModel\":\"RandomForestRegressor.joblib\"}]";
         
-        var response = await _predictionController.GetModels();
-        var result = response.Value;
-        
         var models = _predictionController.GetModels().Result;
         
         Assert.That(models.Value == json);
