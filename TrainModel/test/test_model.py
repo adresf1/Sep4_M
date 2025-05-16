@@ -375,3 +375,6 @@ def test_list_models_unexpected_error(client):
         data = response.get_json()
         assert 'error' in data
         assert 'Simulated failure' in data['error']
+
+
+        
