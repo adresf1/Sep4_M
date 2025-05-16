@@ -14,13 +14,11 @@ services:
     working_dir: /app/TrainModel
     environment:
       - PYTHONPATH=.
-      - SQLALCHEMY_DATABASE_URI=${DATABASE_URL}
-      
     command: python ModelTrainingAPI.py
     stdin_open: true
     tty: true
     networks:
-      - SEP4-NETWORK
+      - SEP4_NETWORK
 
   Sep4-DataProcessing-Service:
     build:
@@ -34,11 +32,8 @@ services:
     command: python DataProcessing.py
     stdin_open: true
     tty: true
-    environment:
-      - PYTHONPATH=.
-      - SQLALCHEMY_DATABASE_URI=${DATABASE_URL}
     networks:
-      - SEP4-NETWORK
+      - SEP4_NETWORK
 
   Sep4-API-Service:
     build:
@@ -53,7 +48,7 @@ services:
     environment:
       - ASPNETCORE_URLS=http://+:8080
     networks:
-      - SEP4-NETWORK
+      - SEP4_NETWORK
 
   Sep4-ML-Service:
     build:
@@ -68,8 +63,8 @@ services:
     environment:
       - ASPNETCORE_URLS=http://+:8080
     networks:
-      - SEP4-NETWORK
+      - SEP4_NETWORK
 
 networks:
-  SEP4-NETWORK:
-    driver: bridge
+  SEP4_NETWORK:
+    external: true

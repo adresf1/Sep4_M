@@ -186,7 +186,7 @@ def predict():
             df_input = pd.DataFrame([data])
 
             prediction = pipeline_model.predict(df_input)[0]
-            probability = pipeline_model.predict_proba(df_input).max()
+            probability = max(pipeline_model.predict_proba(df_input)[0])
 
             return jsonify({
                 "status": "success",
@@ -205,6 +205,7 @@ def predict():
             "error": str(e),
             "trace": traceback.format_exc()
         }), 500
+
 
 
 

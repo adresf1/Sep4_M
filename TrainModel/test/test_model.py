@@ -29,6 +29,7 @@ def client(monkeypatch):
         raising=False
     )
 
+
     # Stub sessionmaker to tom liste
     class FakeSession:
         def __init__(self, items): self._items = items
@@ -190,25 +191,156 @@ def test_train_no_data_found(client,monkeypatch):
     assert "No data found in the table." in data["error"]
 
 
-#def test_predict_missing_fields(client):
-    # Send an empty JSON payload with proper content-type
-#    response = client.post('/rfc_predict', json={})
-    
-#    assert response.status_code == 400
-#   response_data = response.get_json()
-#   assert response_data is not None
-#    assert "error" in response_data
-#    assert "Missing required top-level keys" in response_data["error"]
+# --- Predict-tests ------------------------------------------------------------
 
-#def test_train_no_json(client):
-    # Send an empty body with Content-Type: application/json
-#    response = client.post('/train', data="", content_type="application/json")
-    
-    #Added this comment to test pull request
-    # Assert that the status code is 415 (Unsupported Media Type) if no body is provided
-    #will return bad request(400) becuase the underlying python cant connect to database  
- #   assert response.status_code == 400  # 415 because empty JSON content is unsupported
+def test_predict_random_forest_success(client):
+    payload = {
+        "TypeofModel": "rfc",
+        "NameOfModel": "RandomForestRegressor.joblib",
+        "Data": {
+            "soil_type": 1,
+            "sunlight_hours": 6,
+            "water_frequency": 3,
+            "fertilizer_type": 1,
+            "temperature": 22,
+            "humidity": 60
+        }
+    }
 
-    # Check if the error message is returned in the response text
-    #response_data = response.get_data(as_text=True)
-    #assert "Unsupported Media Type" in response_data  # You can customize this depending on your actual response
+    response = client.post(
+        '/predict',
+        data=json.dumps(payload),
+        content_type='application/json'
+    )
+
+    assert response.status_code == 200
+    json_data = response.get_json()
+    assert json_data["status"] == "success"
+    assert "result" in json_data or "prediction" in json_data
+
+def test_predict_logistic_success(client):
+    payload = {
+        "TypeofModel": "logistic",
+        "NameOfModel": "log_reg_pipeline.joblib",  
+        "Data": {
+            "Soil_Type": "Loamy",
+            "Water_Frequency": "Weekly",
+            "Fertilizer_Type": "Organic",
+            "Sunlight_Hours": 6,
+            "Temperature": 24,
+            "Humidity": 50
+        }
+    }
+
+    response = client.post(
+        '/predict',
+        data=json.dumps(payload),
+        content_type='application/json'
+    )
+
+    print("RESPONSE STATUS CODE:", response.status_code)
+    print("RESPONSE DATA:", response.data.decode())
+
+    assert response.status_code == 200
+
+def test_predict_logistic_invalid_input(client):
+    payload = {
+        "TypeofModel": "logistic",
+        "NameOfModel": "log_reg_pipeline.joblib",
+        "Data": {
+            "Sunlight_Hours": 0,  # Invalid
+            "Temperature": -5,    # Invalid
+            "Humidity": 150       # Invalid
+        }
+    }
+    response = client.post('/predict', data=json.dumps(payload), content_type='application/json')
+    assert response.status_code == 400
+    assert "error" in response.get_json()
+
+
+
+def test_predict_empty_json(client):
+    response = client.post('/predict', data=json.dumps({}), content_type='application/json')
+    assert response.status_code == 400
+    assert "error" in response.get_json()
+
+
+
+def test_predict_logistic_invalid_types(client):
+    payload = {
+        "TypeofModel": "logistic",
+        "NameOfModel": "log_reg_pipeline.joblib",
+        "Data": {
+            "Soil_Type": "Loamy",
+            "Water_Frequency": "Weekly",
+            "Fertilizer_Type": "Organic",
+            "Sunlight_Hours": "six",   # Invalid type
+            "Temperature": "twenty",   # Invalid type
+            "Humidity": "high"         # Invalid type
+        }
+    }
+    response = client.post('/predict', data=json.dumps(payload), content_type='application/json')
+    assert response.status_code == 500 or response.status_code == 400
+    assert "error" in response.get_json()
+
+
+
+
+
+def test_predict_logistic_invalid_types(client):
+    payload = {
+        "TypeofModel": "logistic",
+        "NameOfModel": "log_reg_pipeline.joblib",
+        "Data": {
+            "Soil_Type": "Loamy",
+            "Water_Frequency": "Weekly",
+            "Fertilizer_Type": "Organic",
+            "Sunlight_Hours": "six",   # Invalid type
+            "Temperature": "twenty",   # Invalid type
+            "Humidity": "high"         # Invalid type
+        }
+    }
+    response = client.post('/predict', data=json.dumps(payload), content_type='application/json')
+    assert response.status_code == 500 or response.status_code == 400
+    assert "error" in response.get_json()
+
+
+
+def test_predict_model_not_found(client):
+    payload = {
+        "TypeofModel": "logistic",
+        "NameOfModel": "non_existing_model.joblib",  # Invalid model
+        "Data": {
+            "Soil_Type": "Loamy",
+            "Water_Frequency": "Weekly",
+            "Fertilizer_Type": "Organic",
+            "Sunlight_Hours": 6,
+            "Temperature": 24,
+            "Humidity": 50
+        }
+    }
+    response = client.post('/predict', data=json.dumps(payload), content_type='application/json')
+    assert response.status_code == 404
+    assert "error" in response.get_json()
+
+
+
+def test_predict_unsupported_model_type(client):
+    payload = {
+        "TypeofModel": "unsupported_model",
+        "NameOfModel": "log_reg_pipeline.joblib",
+        "Data": {
+            "Soil_Type": "Loamy",
+            "Water_Frequency": "Weekly",
+            "Fertilizer_Type": "Organic",
+            "Sunlight_Hours": 6,
+            "Temperature": 24,
+            "Humidity": 50
+        }
+    }
+    response = client.post('/predict', data=json.dumps(payload), content_type='application/json')
+    assert response.status_code == 400
+    assert "error" in response.get_json()
+
+
+    
