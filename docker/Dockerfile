@@ -13,6 +13,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 #Kopier resten af projektet
 COPY . .
 
+#Test
+RUN python -m pytest > test.txt
+
 #Åbner bash
 CMD ["bash"]
 

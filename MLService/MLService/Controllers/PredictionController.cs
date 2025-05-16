@@ -40,10 +40,8 @@ public class PredictionController : ControllerBase
 
     
     [HttpPost("predict")]
-    public async Task<ActionResult<string>> Predict()
+    public async Task<ActionResult<string>> Predict([FromBody] string body)
     {
-        using var reader = new StreamReader(Request.Body);
-        var body = await reader.ReadToEndAsync();
 
         if (string.IsNullOrWhiteSpace(body))
             return BadRequest("Request body is empty.");

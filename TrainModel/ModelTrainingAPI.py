@@ -126,7 +126,7 @@ def train():
 
     finally:
         if session is not None:
-            session.close()
+            session.close()      
 
 @app.route('/predict', methods=['POST'])
 def predict():
