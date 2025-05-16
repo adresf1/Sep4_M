@@ -345,20 +345,14 @@ def test_predict_unsupported_model_type(client):
 
     
     # --- Test-getmodels ------------------------------------------------------------
-    @pytest.fixture
-    def client():
-        app.testing = True
-    with app.test_client() as client:
-        yield client
-
+ 
 def test_list_models_success(client):
-    # Simulate a folder with 2 .joblib files and one non-model file
     mock_files = ['model1.joblib', 'ignore.txt', 'model2.joblib']
 
-    with patch('TrainModel.app.os.path.exists', return_value=True), \
-         patch('TrainModel.app.os.listdir', return_value=mock_files), \
-         patch('TrainModel.app.os.path.isfile', return_value=True):
-        
+    with patch('ModelTrainingAPI.os.path.exists', return_value=True), \
+         patch('ModelTrainingAPI.os.listdir', return_value=mock_files), \
+         patch('ModelTrainingAPI.os.path.isfile', return_value=True):
+
         response = client.get('/models')
         assert response.status_code == 200
         data = response.get_json()
@@ -368,16 +362,16 @@ def test_list_models_success(client):
         assert 'ignore.txt' not in data['model_files']
 
 def test_list_models_folder_missing(client):
-    with patch('TrainModel.app.os.path.exists', return_value=False):
+    with patch('ModelTrainingAPI.os.path.exists', return_value=False):
         response = client.get('/models')
         assert response.status_code == 404
         data = response.get_json()
         assert data['error'] == 'Models folder not found.'
 
 def test_list_models_unexpected_error(client):
-    with patch('TrainModel.app.os.path.exists', side_effect=Exception("Simulated failure")):
+    with patch('ModelTrainingAPI.os.path.exists', side_effect=Exception("Simulated failure")):
         response = client.get('/models')
         assert response.status_code == 500
         data = response.get_json()
+        assert 'error' in data
         assert 'Simulated failure' in data['error']
-    
