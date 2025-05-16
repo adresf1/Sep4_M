@@ -223,6 +223,7 @@ def list_models():
             if os.path.isfile(os.path.join(models_folder, f)) and f.endswith('.joblib')
         ]
 
+
         return jsonify({
             "status": "success",
             "model_files": model_files
