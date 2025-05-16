@@ -73,6 +73,8 @@ def create_sensor_data_model():
     # Define the SensorData class
     class SensorData(Base):
         __tablename__ = 'sensor_data'
+        __table_args__ = {'extend_existing': True}  
+
         id = Column(Integer, primary_key=True)
         air_temperature = Column(Float)
         air_humidity = Column(Float)
@@ -94,11 +96,35 @@ def create_sensor_data_model():
         experiment_number = Column(Integer)
         light_variation = Column(Float)
         water_need_score = Column(Float)
-
+        
+        
+        
         def to_dict(self):
-            return {c.name: getattr(self, c.name) for c in self.__table__.columns}
-
-    return SensorData
+            return {
+                'id': self.id,
+                'air_temperature': self.air_temperature,
+                'air_humidity': self.air_humidity,
+                'soil_moisture': self.soil_moisture,
+                'light': self.light,
+                'light_type': self.light_type,
+                'light_max': self.light_max,
+                'light_min': self.light_min,
+                'artificial_light': self.artificial_light,
+                'light_avg': self.light_avg,
+                'distance_to_height': self.distance_to_height,
+                'water': self.water,
+                'time_since_last_watering': self.time_since_last_watering,
+                'water_amount': self.water_amount,
+                'watering_frequency': self.watering_frequency,
+                'timestamp': self.timestamp,
+                'soil_type': self.soil_type,
+                'fertilizer_type': self.fertilizer_type,
+                'experiment_number': self.experiment_number,
+                'light_variation': self.light_variation,
+                'water_need_score': self.water_need_score
+            }
+            
+    return SensorData        
 
 def calculate_column_averages(session, model, column_names):
     try:

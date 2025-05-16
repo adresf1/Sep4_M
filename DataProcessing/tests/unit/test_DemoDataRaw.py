@@ -13,7 +13,6 @@ from pathlib import Path
 os.environ['DATABASE_URL'] = 'postgresql://dummy_url'
 
 
-
 print("Starting pytest.fixture.....")
 @pytest.fixture
 def client():

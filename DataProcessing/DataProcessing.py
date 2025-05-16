@@ -10,6 +10,7 @@ import os
 from dotenv import load_dotenv, find_dotenv, dotenv_values
 from DemoData import create_sensor_data_model, get_model_for_table, create_plant_model, calculate_column_averages, create_preprocessed_plant_model, one_hot_encode_columns, copy_to_preprocessed
 from sqlalchemy import distinct, create_engine
+from mock_alchemy.mocking import UnifiedAlchemyMagicMock
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, Float, String, Boolean
 from dotenv import load_dotenv
@@ -17,7 +18,6 @@ from pathlib import Path
 
 
 app = Flask(__name__)
-
 
 def get_engine_and_session(DATABASE_URL):
     engine = create_engine(DATABASE_URL)
