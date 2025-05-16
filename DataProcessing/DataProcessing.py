@@ -9,7 +9,7 @@ import math
 import os
 from dotenv import load_dotenv, find_dotenv, dotenv_values
 from DemoData import create_sensor_data_model, get_model_for_table, create_plant_model, calculate_column_averages, create_preprocessed_plant_model, one_hot_encode_columns, copy_to_preprocessed
-from sqlalchemy import distinct, create_engine
+from sqlalchemy import distinct, create_engine, inspect
 from mock_alchemy.mocking import UnifiedAlchemyMagicMock
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, Float, String, Boolean
@@ -424,6 +424,22 @@ def preprocess_data():
             "averages": averages
         }), 200
 
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/get-tables', methods=['GET'])
+def get_tables():
+    DATABASE_URL = os.getenv('DATABASE_URL')
+    if not DATABASE_URL:
+        return jsonify({'error': 'Missing DATABASE_URL'}), 500
+    session = None
+    try:
+        engine, session = get_engine_and_session(DATABASE_URL)
+        ins = inspect(engine)
+        tables = ins.get_table_names()
+        # Remove system table
+        tables.remove('spatial_ref_sys')
+        return jsonify(tables), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
