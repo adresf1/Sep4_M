@@ -205,7 +205,32 @@ def predict():
             "error": str(e),
             "trace": traceback.format_exc()
         }), 500
+    
 
+
+@app.route('/models', methods=['GET'])
+def list_models():
+    try:
+        # Udgangspunkt i app.py's placering (TrainModel/)
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        models_folder = os.path.join(current_dir, 'TrainedModels')  # kun ét trin ned
+
+        if not os.path.exists(models_folder):
+            return jsonify({"error": "Models folder not found."}), 404
+
+        model_files = [
+            f for f in os.listdir(models_folder)
+            if os.path.isfile(os.path.join(models_folder, f)) and f.endswith('.joblib')
+        ]
+
+
+        return jsonify({
+            "status": "success",
+            "model_files": model_files
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 
