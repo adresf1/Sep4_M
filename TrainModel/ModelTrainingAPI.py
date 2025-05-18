@@ -71,9 +71,9 @@ def get_model_for_table(table_name, DATABASE_URL):
 # API endpoint to train the model
 @app.route('/train', methods=['POST'])
 def train():
-    data = request.get_json(silent=True)
+    data = request.get_json(force=True)
 
-    if data is None:
+    if not data:
         return jsonify({"error": "No JSON data provided"}), 400
 
     # Tvangsfelter: model_name, table_name, target_measure (understøtter camelCase og snake_case)
@@ -284,7 +284,7 @@ def predict():
         else:
             return jsonify({"error": f"Unsupported model type '{model_type}'"}), 400
 
-    except FileNotFoundError:
+    except FileNotFoundError as e:
         return jsonify({"error": str(e)}), 404
     except KeyError as e:
         return jsonify({"error": f"Missing key: {str(e)}"}), 400

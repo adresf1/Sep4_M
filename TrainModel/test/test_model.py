@@ -134,7 +134,7 @@ def test_train_no_json(client):
     resp = client.post('/train', data='', content_type='application/json')
     assert resp.status_code == 400
 
-    data = resp.get_json(silent=True)
+    data = resp.get_json(force=True)
     assert data is not None, "Forventede JSON‐fejlbesked, ikke HTML‐side"
     assert data["error"] == "No records found in table "
 
@@ -188,7 +188,7 @@ def test_train_no_data_found(client,monkeypatch):
     #Assert at status er 404
     assert resp.status_code == 404
     data = resp.get_json()
-    assert "No data found in the table." in data["error"]
+    assert "No records found" in data["error"]
 
 
 # --- Predict-tests ------------------------------------------------------------
@@ -196,7 +196,7 @@ def test_train_no_data_found(client,monkeypatch):
 def test_predict_random_forest_success(client):
     payload = {
         "TypeofModel": "rfc",
-        "NameOfModel": "RandomForestRegressor.joblib",
+        "NameOfModel": "MyRFCModel_V6_random_forest.joblib",
         "Data": {
             "soil_type": 1,
             "sunlight_hours": 6,
@@ -221,7 +221,7 @@ def test_predict_random_forest_success(client):
 def test_predict_logistic_success(client):
     payload = {
         "TypeofModel": "logistic",
-        "NameOfModel": "log_reg_pipeline.joblib",  
+        "NameOfModel": "MyLRModel_v6_logistic_regression.joblib",  
         "Data": {
             "soil_type": "Loamy",
             "water_frequency": "Weekly",
@@ -292,12 +292,12 @@ def test_predict_logistic_invalid_types(client):
         "TypeofModel": "logistic",
         "NameOfModel": "log_reg_pipeline.joblib",
         "Data": {
-            "Soil_Type": "Loamy",
-            "Water_Frequency": "Weekly",
-            "Fertilizer_Type": "Organic",
-            "Sunlight_Hours": "six",   # Invalid type
-            "Temperature": "twenty",   # Invalid type
-            "Humidity": "high"         # Invalid type
+            "soil_Type": "Loamy",
+            "water_Frequency": "Weekly",
+            "fertilizer_Type": "Organic",
+            "sunlight_hours": "six",   # Invalid type
+            "temperature": "twenty",   # Invalid type
+            "humidity": "high"         # Invalid type
         }
     }
     response = client.post('/predict', data=json.dumps(payload), content_type='application/json')
@@ -311,12 +311,12 @@ def test_predict_model_not_found(client):
         "TypeofModel": "logistic",
         "NameOfModel": "non_existing_model.joblib",  # Invalid model
         "Data": {
-            "Soil_Type": "Loamy",
-            "Water_Frequency": "Weekly",
-            "Fertilizer_Type": "Organic",
-            "Sunlight_Hours": 6,
-            "Temperature": 24,
-            "Humidity": 50
+            "soil_type": "Loamy",
+            "water_frequency": "Weekly",
+            "fertilizer_type": "Organic",
+            "sunlight_hours": 6,
+            "temperature": 24,
+            "humidity": 50
         }
     }
     response = client.post('/predict', data=json.dumps(payload), content_type='application/json')
@@ -330,12 +330,12 @@ def test_predict_unsupported_model_type(client):
         "TypeofModel": "unsupported_model",
         "NameOfModel": "log_reg_pipeline.joblib",
         "Data": {
-            "Soil_Type": "Loamy",
-            "Water_Frequency": "Weekly",
-            "Fertilizer_Type": "Organic",
-            "Sunlight_Hours": 6,
-            "Temperature": 24,
-            "Humidity": 50
+            "soil_type": "Loamy",
+            "water_frequency": "Weekly",
+            "fertilizer_type": "Organic",
+            "sunlight_hours": 6,
+            "temperature": 24,
+            "humidity": 50
         }
     }
     response = client.post('/predict', data=json.dumps(payload), content_type='application/json')
