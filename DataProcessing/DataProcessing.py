@@ -15,7 +15,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, Float, String, Boolean
 from dotenv import load_dotenv
 from pathlib import Path
-
+load_dotenv()
 
 app = Flask(__name__)
 
