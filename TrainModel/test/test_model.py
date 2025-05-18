@@ -136,7 +136,7 @@ def test_train_no_json(client):
 
     data = resp.get_json(silent=True)
     assert data is not None, "Forventede JSON‐fejlbesked, ikke HTML‐side"
-    assert data["error"] == "No JSON data provided"
+    assert data["error"] == "No records found in table "
 
 @pytest.mark.parametrize('missing', ['model_name','table_name','target_measure'])
 def test_train_missing_fields(client, missing):
@@ -223,12 +223,12 @@ def test_predict_logistic_success(client):
         "TypeofModel": "logistic",
         "NameOfModel": "log_reg_pipeline.joblib",  
         "Data": {
-            "Soil_Type": "Loamy",
-            "Water_Frequency": "Weekly",
-            "Fertilizer_Type": "Organic",
-            "Sunlight_Hours": 6,
-            "Temperature": 24,
-            "Humidity": 50
+            "soil_type": "Loamy",
+            "water_frequency": "Weekly",
+            "fertilizer_type": "Organic",
+            "sunlight_hours": 6,
+            "temperature": 24,
+            "humidity": 50
         }
     }
 

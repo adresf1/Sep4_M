@@ -285,7 +285,7 @@ def predict():
             return jsonify({"error": f"Unsupported model type '{model_type}'"}), 400
 
     except FileNotFoundError:
-        return jsonify({"error": f"Model '{model_name}' not found in TrainedModels"}), 404
+        return jsonify({"error": str(e)}), 404
     except KeyError as e:
         return jsonify({"error": f"Missing key: {str(e)}"}), 400
     except ValueError as e:
