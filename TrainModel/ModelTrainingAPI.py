@@ -5,7 +5,7 @@ import sys, os
 from flask import Flask, request, jsonify, abort
 from werkzeug.exceptions import HTTPException
 import pandas as pd
-from TrainRFCModel import train_model, train_rfc, train_lr
+from TrainRFCModel import train_model, _common_preprocessing, train_and_save_lr_model
 from Predict import unpack_model, makePrediction, REQUIRED_FIELDS_RFC
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -135,30 +135,56 @@ def train():
 
         # Konverter til DataFrame
         df = pd.DataFrame([record.to_dict() for record in records])
-        x = df.drop([target_measure], axis=1)
-        y = df[target_measure]
+        #Fjern whitespace fra kolonnenavne
+        df.columns = df.columns.str.strip()
+        # print("DF COLUMNS:", df.columns.to_list())
+        # print("DROPPING:", target_measure)
 
-        X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=test_size, random_state=random_state)
+        #Split data i X og y
+        #X = df.drop([target_measure], axis=1)
+        #y = df[target_measure]
 
-        # Argumenter til træningsfunktion
-        args = {
-            'trainningData': df,
-            'targetMeasure': target_measure,
-            'testSize': test_size,
-            'randomState': random_state,
-            'model_type': model_type,
-            'estimators': estimators,
-            'max_depth': max_depth,
-            'solver': solver,
-            'penalty': penalty,
-            'C': C,
-            'max_iter': max_iter
-        }
+        print(">>> TYPE OF df:", type(df), " | VALUE:", df)
+        print(">>> TARGET_MEASURE:", repr(target_measure))
 
-        clf, metrics = train_model(**args)
+        X_train, X_test, y_train, y_test = _common_preprocessing(df, target_measure, test_size, random_state)
 
-        # Gem modellen
-        filename = save_model_to_folder(clf, f"{model_name}_{model_type}", "TrainedModels")
+        metrics = {}
+        filename = None
+
+        if model_type == 'logistic_regression':
+            base_name = f"{model_name}_{model_type}"
+            #træn og gem pipeline
+            filename = train_and_save_lr_model(X_train,y_train, base_name)
+            #Evaluering af pipeline:
+            from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+            pipeline = joblib.load(os.path.join("TrainedModels", filename))
+            prediction = pipeline.predict(X_test)
+            metrics = {
+                'accuracy': round(accuracy_score(y_test, prediction),4),
+                'precision':round(precision_score(y_test, prediction, zero_division=0)),
+                'recall': round(recall_score(y_test, prediction, zero_division=0),4),
+                'f1': round(f1_score(y_test, prediction, zero_division=0),4),
+            }
+        else:
+            #til train dispatcher
+            clf, metrics = train_model(
+            X_train=X_train,
+            X_test=X_test,
+            y_train=y_train,
+            y_test=y_test,
+            model_type=model_type,
+            estimators=estimators,
+            max_depth=max_depth,
+            solver=solver,
+            penalty=penalty,
+            C=C,
+            max_iter=max_iter,
+            random_state=random_state
+        )
+
+            # Gem modellen
+            filename = save_model_to_folder(clf, f"{model_name}_{model_type}", "TrainedModels")
 
         return jsonify({
             "status": "success",
@@ -185,6 +211,11 @@ def predict():
         model_type = payload.get('TypeofModel') or 'logistic_regression'
         model_name = payload.get('NameOfModel') or payload.get('ModelName')
         data = payload.get('Data')
+        #normaliser data
+        data_dict = {}
+        for k, v in data.items():
+            key = ''.join(['_'+c.lower() if c.isupper()else c for c in k]).lstrip('_')
+            data_dict[key.replace(' ', '_')] = v
 
         if not model_name or not data:
             return jsonify({"error": "Missing 'ModelName' or 'Data'"}), 400
@@ -192,23 +223,23 @@ def predict():
         # RFC logik
         if model_type.lower() in ['rfc', 'random_forest']:
             # Valider påkrævede felter
-            missing_fields = REQUIRED_FIELDS_RFC - data.keys()
+            missing_fields = REQUIRED_FIELDS_RFC - data_dict.keys()
             if missing_fields:
                 return jsonify({
                     "error": f"Missing fields for Random Forest model: {', '.join(missing_fields)}"
                 }), 400
 
             # Grænseværdi-validering for RFC
-            
-            if not (1 <= data['sunlight_hours'] <= 24):
+
+            if not (1 <= data_dict['sunlight_hours'] <= 24):
                 return jsonify({"error": "Sunlight_Hours must be between 1 and 24"}), 400
-            if not (0 <= data['temperature'] <= 50):
+            if not (0 <= data_dict['temperature'] <= 50):
                 return jsonify({"error": "Temperature must be between 0 and 50"}), 400
-            if not (10 <= data['humidity'] <= 100):
+            if not (10 <= data_dict['humidity'] <= 100):
                 return jsonify({"error": "Humidity must be between 10 and 100"}), 400
 
             model = unpack_model(model_name, "TrainedModels")
-            result = makePrediction(model, data)
+            result = makePrediction(model, data_dict)
 
             return jsonify({
                 "status": "success",
@@ -219,22 +250,22 @@ def predict():
 
         # Logistic Regression logik
         elif model_type.lower() in ['logistic', 'logistic_regression']:
-            if not (1 <= data['Sunlight_Hours'] <= 24):
+            if not (1 <= data_dict['sunlight_hours'] <= 24):
                 return jsonify({"error": "Sunlight_Hours must be between 1 and 24"}), 400
-            if not (0 <= data['Temperature'] <= 50):
+            if not (0 <= data_dict['temperature'] <= 50):
                 return jsonify({"error": "Temperature must be between 0 and 50"}), 400
-            if not (10 <= data['Humidity'] <= 100):
+            if not (10 <= data_dict['humidity'] <= 100):
                 return jsonify({"error": "Humidity must be between 10 and 100"}), 400
 
-            model_path = os.path.join(os.getcwd(), "TrainedModels", model_name)
+            model_path = os.path.join("TrainedModels", model_name)
             if not os.path.exists(model_path):
                 return jsonify({"error": f"Model '{model_name}' not found in TrainedModels"}), 404
 
             pipeline_model = joblib.load(model_path)
-            df_input = pd.DataFrame([data])
+            df_input = pd.DataFrame([data_dict])
 
             prediction = pipeline_model.predict(df_input)[0]
-            probability = max(pipeline_model.predict_proba(df_input)[0])
+            probability = pipeline_model.predict_proba(df_input)[0].max()
 
             return jsonify({
                 "status": "success",
