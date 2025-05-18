@@ -206,6 +206,12 @@ def train():
 def predict():
     try:
         payload = request.get_json(force=True)
+        if not payload:
+            return jsonify({"error": "No JSON data provided"}), 400
+        if 'Data' not in payload or not isinstance(payload['Data'], dict):
+            return jsonify({"error": "Invalid or missing 'Data' field"}), 400
+        if 'NameOfModel' not in payload:
+            return jsonify({"error": "Missing 'NameOfModel' field"}), 400
 
         # Identifikation af modeltype
         model_type = payload.get('TypeofModel') or 'logistic_regression'
@@ -277,6 +283,13 @@ def predict():
 
         else:
             return jsonify({"error": f"Unsupported model type '{model_type}'"}), 400
+
+    except FileNotFoundError:
+        return jsonify({"error": f"Model '{model_name}' not found in TrainedModels"}), 404
+    except KeyError as e:
+        return jsonify({"error": f"Missing key: {str(e)}"}), 400
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400  
 
     except Exception as e:
         import traceback
