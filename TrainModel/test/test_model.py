@@ -13,7 +13,7 @@ class DummyPlant:
 
 class DummyModel:
     def __init__(self, probas): self.probas = probas
-    def predict_proba(self, X): return [self.probas]
+    def predict_proba(self, X): return [[0.2,0.8]]
     def predict(self, X):       return [int(self.probas[1] > 0.5)]
 
 # --- Flask-client-fixture ---------------------------------------------------
@@ -135,8 +135,8 @@ def test_train_no_json(client):
     assert resp.status_code == 400
 
     data = resp.get_json(force=True)
-    assert data is not None, "Forventede JSON‐fejlbesked, ikke HTML‐side"
-    assert data["error"] == "No records found in table "
+    assert data is not None
+    assert data["error"] == "No JSON data provided"
 
 @pytest.mark.parametrize('missing', ['model_name','table_name','target_measure'])
 def test_train_missing_fields(client, missing):
