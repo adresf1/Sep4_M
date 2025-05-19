@@ -120,14 +120,15 @@ class TestAPII:
 
         assert expectedresult == result
 
-/*    def test_APII_DBSessionLeak(self):
+'''
+    def test_APII_DBSessionLeak(self):
         payload = '{"TypeofModel": "rfc","NameOfModel": "RandomForestRegressor.joblib","Data": {"soil_type": 1,"sunlight_hours": 6,"water_frequency": 3,"fertilizer_type": 1,"temperature": 22,"humidity": 60}}'
         driver = srFirefox(options=self.options, service=FirefoxService(executable_path=GeckoDriverManager().install()))
         headers = {'Content-type': 'application/json'}
         for x in range(20):
             res = driver.request('POST', self.endpoint + '/predict', headers=headers, data=payload)
-            assert res.status_code == 200*/
-
+            assert res.status_code == 200
+'''
 
 
 class TestMLService:
@@ -156,8 +157,9 @@ class TestMLService:
         result = driver.find_element(By.TAG_NAME, 'body').text
 
         assert expectedresult == result
-
-/*    def test_Predict(self):
+        
+'''
+    def test_Predict(self):
         payload = '{"TypeofModel": "rfc","NameOfModel": "RandomForestRegressor.joblib","Data": {"soil_type": 1,"sunlight_hours": 6,"water_frequency": 3,"fertilizer_type": 1,"temperature": 22,"humidity": 60}}'
         expectedresult = '{\n  "message": "Random Forest prediction completed successfully.",\n  "model_used": "RandomForestRegressor.joblib",\n  "result": [\n    0.5952380952380952,\n    0.40476190476190477\n  ],\n  "status": "success"\n}\n'
         driver = srFirefox(options=self.options, service=FirefoxService(executable_path=GeckoDriverManager().install()))
@@ -172,4 +174,5 @@ class TestMLService:
         headers = {'Content-type': 'application/json'}
         for x in range(20):
             res = driver.request('POST', self.endpoint + '/Prediction/predict', headers=headers, data=payload)
-            assert res.status_code == 200*/
+            assert res.status_code == 200
+'''
