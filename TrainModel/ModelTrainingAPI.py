@@ -22,7 +22,7 @@ load_dotenv()
 
 ALLOWED_MODEL_TYPES ={'random_forest', 'logistic_regression'}
 SHORTCUT_MAP = {
-    'rfc': 'random_forrest',
+    'rfc': 'random_forest',
     'rf': 'random_forest',
     'lr': 'logistic_regression',
     'logistic': 'logistic_regression',
@@ -31,6 +31,14 @@ SHORTCUT_MAP = {
 
 app = Flask(__name__)
 _model_cache = {}
+
+class DBSingleton(object):
+    def __new__(cls, DATABASE_URL):
+        if not hasattr(cls, "engine"):
+            cls.engine = create_engine(DATABASE_URL)
+            Sessionmaker = sessionmaker(bind=cls.engine)
+            cls.session = Sessionmaker()
+        return cls.engine, cls.session
 
 def save_model_to_folder(model, model_name, folder_name):
     if not os.path.exists(folder_name):
@@ -64,7 +72,7 @@ def create_plant_data_class(table_name: str, engine):
 
 def get_model_for_table(table_name, DATABASE_URL):
     if table_name not in _model_cache:
-        engine = create_engine(DATABASE_URL)
+        engine, session = DBSingleton(DATABASE_URL)
         _model_cache[table_name] = create_plant_data_class(table_name, engine)
     return _model_cache[table_name]
 
@@ -118,16 +126,14 @@ def train():
     max_iter = int(data.get('max_iter', 1000))
 
     # Database URL
-    DATABASE_URL = data.get('db_url') or os.getenv('DATABASE_URL')
+    DATABASE_URL = os.getenv('DATABASE_URL')
     if not DATABASE_URL:
         return jsonify({"error": "DATABASE_URL not set in environment variables"}), 500
 
     try:
         # ORM-model og data
         PlantModel = get_model_for_table(table_name, DATABASE_URL)
-        engine = create_engine(DATABASE_URL)
-        Session = sessionmaker(bind=engine)
-        session = Session()
+        engine, session = DBSingleton(DATABASE_URL)
 
         records = session.query(PlantModel).all()
         if not records:
