@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL") or DATABASE_URL = 'postgresql://dummy_url'
+DATABASE_URL = os.getenv("DATABASE_URL") or 'postgresql://dummy_url'
 
 if DATABASE_URL == 'postgresql://dummy_url':
     print("Application have defaulted to dummy connection string")
