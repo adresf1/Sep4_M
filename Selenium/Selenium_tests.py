@@ -62,6 +62,8 @@ class TestAPII:
             session.commit()
         PlantData.create(engine)
         session.commit()
+        session.close()
+        engine.dispose()
 
 
     def test_PostSensor(self):
