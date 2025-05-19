@@ -1,6 +1,7 @@
 import sys
 import os
 import pytest
+from pathlib import Path
 
 # Add the DataProcessing/ directory to the path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
@@ -8,14 +9,12 @@ from DemoData import create_plant_model, calculate_column_averages, create_prepr
 from unittest.mock import patch, MagicMock
 from DataProcessing import app
 from dotenv import load_dotenv
-from pathlib import Path
-
-os.environ['DATABASE_URL'] = 'postgresql://dummy_url'
 
 
 print("Starting pytest.fixture.....")
 @pytest.fixture
-def client():
+def client(monkeypatch):
+    monkeypatch.setenv('DATABASE_URL', 'postgresql://mock_url')
     app.config['TESTING'] = True
     with app.test_client() as client:
         yield client
@@ -34,14 +33,18 @@ def test_get_plant_data_empty(client):
     print("\n🔍 Running test_get_plant_data_empty...")
 
     with patch('DemoData.create_plant_model') as mock_create_model, \
-         patch('DataProcessing.get_engine_and_session') as mock_get_engine_session:
+         patch('DataProcessing.get_engine_and_session') as mock_get_engine_session, \
+         patch('sqlalchemy.create_engine') as mock_create_engine:
+
+        mock_engine = MagicMock()  
+        mock_create_engine.return_value = mock_engine
 
         mock_model = MagicMock()
         mock_create_model.return_value = mock_model
 
         mock_session = MagicMock()
         mock_session.query.return_value.all.return_value = []
-        mock_get_engine_session.return_value = (MagicMock(), mock_session)
+        mock_get_engine_session.return_value = (mock_engine, mock_session)
 
         response = client.get('/DemoDataRaw')
         data = response.get_json()
