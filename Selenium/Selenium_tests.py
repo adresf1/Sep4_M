@@ -166,7 +166,7 @@ class TestMLService:
         assert res.text == expectedresult
 
     def test_MLService_DBSessionLeak(self):
-        payload = '{"model_name": "E2E_test_RFC_model","table_name": "plant_data_test","target_measure": "growth_milestone","model_type": "random_forest","testSize": 0.2,"randomState": 42,"estimators": 100,"max_depth": 10}'
+        payload = '{"TypeofModel": "rfc","NameOfModel": "RandomForestRegressor.joblib","Data": {"soil_type": 1,"sunlight_hours": 6,"water_frequency": 3,"fertilizer_type": 1,"temperature": 22,"humidity": 60}}'
         driver = srFirefox(options=self.options, service=FirefoxService(executable_path=GeckoDriverManager().install()))
         headers = {'Content-type': 'application/json'}
         for x in range(20):
