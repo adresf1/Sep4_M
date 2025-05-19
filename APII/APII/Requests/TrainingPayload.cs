@@ -1,5 +1,4 @@
-namespace MLService.Models.Training;
-
+namespace APII.APII.Requests;
 public class TrainingPayload
 {
      public string model_name { get; set; } = "MyLRModel_v6";

@@ -9,6 +9,7 @@ using APII;
 using APII.Models;
 using MLService.Models.Prediction;
 using Newtonsoft.Json.Linq; // Justér navnerum efter din løsning
+using APII.APII.Requests;
 
 
 namespace APII.Controllers;
@@ -20,6 +21,7 @@ public class SensorController : ControllerBase
     private readonly HttpClient _httpClient;
     private readonly string _pythonServiceUrl = "http://Sep4-DataProcessing-Service:5000/fetch-sensor-data";
     private readonly string _mlServiceUrl = "http://Sep4-ML-Service:8080/api/prediction"; // ML Service endpoint
+    private readonly string _Trainingendpoint = "http://Sep4-ML-Service:8080/api/training"; // ML Service endpoint
 
     public SensorController(HttpClient httpClient)
     {
@@ -27,7 +29,28 @@ public class SensorController : ControllerBase
     }
 
 
-
+[HttpPost ("train")]
+    public async Task<ActionResult<string>> Train([FromBody] TrainingPayload data)
+    {
+        string endpoint = _Trainingendpoint;
+        
+        string payload = JsonConvert.SerializeObject(data);
+        
+        var content = new StringContent(payload, System.Text.Encoding.UTF8, "application/json");
+        var response = await _httpClient.PostAsync(endpoint, content);
+        
+        if (response.IsSuccessStatusCode)
+        {
+            return await response.Content.ReadAsStringAsync();
+        }
+        else
+        {
+            // TODO: Implement logging
+            string error = $"{response.StatusCode}: Failed to request training: {await response.Content.ReadAsStringAsync()}";
+            Console.WriteLine(error);
+            return error;
+        }
+    }
     // GET: api/sensors
     [HttpGet]
     public async Task<ActionResult<IEnumerable<SensorData>>> GetSensors()

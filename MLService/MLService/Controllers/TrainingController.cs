@@ -22,7 +22,7 @@ public class TrainingController : ControllerBase
         _httpClient = httpClient;
         // Check if we are running on docker and set URL accordingly
         if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
-            _endpoint = "http://Sep4-API-Service:5000/";
+            _endpoint = "http://Sep4-ModelTraining-Service:5000/";
         else
             _endpoint = "http://localhost:5010/";
     }
