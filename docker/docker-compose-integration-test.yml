@@ -14,8 +14,6 @@ services:
     working_dir: /app/TrainModel
     environment:
       - PYTHONPATH=.
-      - DATABASE_URL=TESTDB
-      - DATABASE_URL_TEST=TESTDB
     command: python ModelTrainingAPI.py
     stdin_open: true
     tty: true
@@ -31,9 +29,6 @@ services:
     image: sep4-dataprocessing-env
     container_name: data-processing-container
     working_dir: /app/DataProcessing
-    environment:
-      - DATABASE_URL=TESTDB
-      - DATABASE_URL_TEST=TESTDB
     command: python DataProcessing.py
     stdin_open: true
     tty: true
