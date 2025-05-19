@@ -24,11 +24,19 @@ public class PredictionControllerTest
     [Test]
     public async Task GetModels()
     {
-        string json = "[{\"TypeOfModel\":\"rfc\",\"NameOfModel\":\"RandomForestRegressor.joblib\"}]";
+        string expectedResponse =
+            "{\"model_files\": [\"log_reg_pipeline.joblib\",\"RandomForestRegressor_20250511_210430.joblib\",\"RandomForestRegressor.joblib\",\"RandomForestRegressor_20250510_160735.joblib\"],\"status\": \"success\"}";
+        
+        var request = _mockedHandler.When(method: HttpMethod.Get, "http://Sep4-ModelTraining-Service:5000/models")
+            .Respond("application/json", "{\"model_files\": [\"log_reg_pipeline.joblib\",\"RandomForestRegressor_20250511_210430.joblib\",\"RandomForestRegressor.joblib\",\"RandomForestRegressor_20250510_160735.joblib\"],\"status\": \"success\"}");
         
         var models = _predictionController.GetModels().Result;
         
-        Assert.That(models.Value == json);
+        Assert.That(_mockedHandler.GetMatchCount(request), Is.EqualTo(1));
+        Assert.That(models.Value, Is.EqualTo(expectedResponse));
+        
+        // Cleanup
+        _mockedHandler.Clear();
     }
 
     [Test]
