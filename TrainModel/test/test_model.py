@@ -219,19 +219,19 @@ def test_train_no_data_found(client,monkeypatch):
 #     assert json_data["status"] == "success"
 #     assert "result" in json_data or "prediction" in json_data
 
-# def test_predict_logistic_success(client):
-#     payload = {
-#         "TypeofModel": "logistic",
-#         "NameOfModel": "MyLRModel_v6_logistic_regression.joblib",  
-#         "Data": {
-#             "soil_type": "Loamy",
-#             "water_frequency": "Weekly",
-#             "fertilizer_type": "Organic",
-#             "sunlight_hours": 6,
-#             "temperature": 24,
-#             "humidity": 50
-#         }
-#     }
+def test_predict_logistic_success(client):
+    payload = {
+        "TypeofModel": "logistic",
+        "NameOfModel": "MyLRModel_v6_logistic_regression.joblib",  
+        "Data": {
+              "soil_type": 1,
+            "sunlight_hours": 6,
+            "water_frequency": 3,
+            "fertilizer_type": 1,
+        "temperature": 22,
+        "humidity": 60
+        }
+    }
 
 #     response = client.post(
 #         '/predict',
