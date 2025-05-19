@@ -87,12 +87,12 @@ public class SensorController : ControllerBase
     }
 
     [HttpPost("predict")]
-    public async Task<ActionResult<string>> PredictUnified([FromBody] string body)
+    public async Task<ActionResult<string>> PredictUnified()
     {
         try
         {
-            //using var reader = new StreamReader(Request.Body);
-            //var body = await reader.ReadToEndAsync();
+            using var reader = new StreamReader(Request.Body);
+            var body = await reader.ReadToEndAsync();
 
             if (string.IsNullOrWhiteSpace(body))
                 return BadRequest("Request body is empty.");

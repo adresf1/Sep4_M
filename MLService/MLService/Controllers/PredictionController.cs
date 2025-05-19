@@ -40,14 +40,20 @@ public class PredictionController : ControllerBase
 
     
     [HttpPost("predict")]
-    public async Task<ActionResult<string>> Predict([FromBody] string body)
+    public async Task<ActionResult<string>> Predict()
     {
+        string req;
 
-        if (string.IsNullOrWhiteSpace(body))
+        using (StreamReader reader = new StreamReader(Request.Body, Encoding.UTF8))
+        {
+            req = await reader.ReadToEndAsync();
+        }
+
+        if (string.IsNullOrWhiteSpace(req))
             return BadRequest("Request body is empty.");
 
         // Peek into TypeofModel to determine which class to deserialize to
-        var jsonObj = JObject.Parse(body);
+        var jsonObj = JObject.Parse(req);
         var typeOfModel = jsonObj["TypeofModel"]?.ToString();
 
         if (string.IsNullOrEmpty(typeOfModel))

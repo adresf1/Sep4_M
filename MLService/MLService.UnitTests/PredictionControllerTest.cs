@@ -1,9 +1,11 @@
 ﻿using MLService.Controllers;
 using System.Net;
+using Microsoft.AspNetCore.Http;
 using MLService.Models.Prediction;
 using Newtonsoft.Json;
 using RichardSzalay.MockHttp;
 using Microsoft.AspNetCore.Mvc;
+using System.Text;
 
 namespace MLService.UnitTests;
 
@@ -52,8 +54,22 @@ public class PredictionControllerTest
         
         var request = _mockedHandler.When(method: HttpMethod.Post, "http://Sep4-ModelTraining-Service:5000/predict")
             .Respond("application/json", resultPayload);
-        
-        var response = await _predictionController.Predict(JsonConvert.SerializeObject(req));
+            
+        // Set request
+        var requestMessage = new HttpRequestMessage();
+        requestMessage.Method = HttpMethod.Post;
+        requestMessage.Content = new StringContent(JsonConvert.SerializeObject(req));
+        var stream = new MemoryStream(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(req)));
+        var controllerContext = new ControllerContext()
+        {
+            HttpContext = new DefaultHttpContext()
+            {
+                Request = { Body = stream, ContentLength = stream.Length }
+            }
+        };
+        _predictionController.ControllerContext = controllerContext;
+            
+        var response = await _predictionController.Predict();
         var result = response.Value;
         
         Assert.That(_mockedHandler.GetMatchCount(request), Is.EqualTo(1));
