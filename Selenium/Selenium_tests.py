@@ -13,7 +13,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 
 class TestAPII:
-    endpoint = "http://localhost:5019/api/Sensor";  # "http://Sep4-API-Service:8080/api/Sensor";
+    endpoint = "http://Sep4-API-Service:8080/api/Sensor";
     options = FirefoxOptions()
     options.add_argument("--headless")
     options.set_preference('devtools.jsonview.enabled', False)
@@ -58,8 +58,9 @@ class TestAPII:
         # Create inspector
         inspector = sqlalchemy.inspect(engine)
         if inspector.has_table('sensor_data'):
-            PlantData.drop(engine)
-            session.commit()
+            #PlantData.drop(engine)
+            #session.commit()
+            assert False
         PlantData.create(engine)
         session.commit()
         session.close()
@@ -130,7 +131,7 @@ class TestAPII:
 
 
 class TestMLService:
-    endpoint = "http://localhost:5249/api";  # "http://Sep4-ML-Service:8080/api";
+    endpoint = "http://Sep4-ML-Service:8080/api";
     options = FirefoxOptions()
     options.add_argument("--headless")
     options.set_preference('devtools.jsonview.enabled', False)
