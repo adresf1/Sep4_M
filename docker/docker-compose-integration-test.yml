@@ -31,7 +31,7 @@ services:
     container_name: data-processing-container
     working_dir: /app/DataProcessing
     environment:
-      - DATABASE_URL=${secrets.DATABASE_URL_TEST}
+      - DATABASE_URL=TESTDB
     command: python DataProcessing.py
     stdin_open: true
     tty: true
