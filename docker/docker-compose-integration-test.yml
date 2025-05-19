@@ -14,7 +14,7 @@ services:
     working_dir: /app/TrainModel
     environment:
       - PYTHONPATH=.
-      - DATABASE_URL=${DATABASE_URL_TEST}
+      - DATABASE_URL=TESTDB
     command: python ModelTrainingAPI.py
     stdin_open: true
     tty: true

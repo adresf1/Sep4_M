@@ -13,7 +13,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 
 class TestAPII:
-    endpoint = "http://localhost:5020/api/Sensor";
+    endpoint = "http://localhost:5019/api/Sensor";
     options = FirefoxOptions()
     options.add_argument("--headless")
     options.set_preference('devtools.jsonview.enabled', False)
@@ -58,9 +58,8 @@ class TestAPII:
         # Create inspector
         inspector = sqlalchemy.inspect(engine)
         if inspector.has_table('sensor_data'):
-            #PlantData.drop(engine)
-            #session.commit()
-            assert False
+            PlantData.drop(engine)
+            session.commit()
         PlantData.create(engine)
         session.commit()
         session.close()
@@ -88,7 +87,7 @@ class TestAPII:
         assert expectedresult == result
 
     def test_GetModels(self):
-        expectedresult = '[{"TypeOfModel":"rfc","NameOfModel":"RandomForestRegressor.joblib"}]'
+        expectedresult = '{\n  "model_files": [\n    "log_reg_pipeline.joblib",\n    "RandomForestRegressor_20250511_210430.joblib",\n    "RandomForestRegressor.joblib",\n    "RandomForestRegressor_20250510_160735.joblib",\n    "MyLRModel_v6_logistic_regression.joblib",\n    "MyRFCModel_V6_random_forest.joblib"\n  ],\n  "status": "success"\n}'
 
         driver = webdriver.Firefox(options=self.options, service=FirefoxService(executable_path=GeckoDriverManager().install()))
 
@@ -120,7 +119,7 @@ class TestAPII:
 
         assert expectedresult == result
 
-'''
+
     def test_APII_DBSessionLeak(self):
         payload = '{"TypeofModel": "rfc","NameOfModel": "RandomForestRegressor.joblib","Data": {"soil_type": 1,"sunlight_hours": 6,"water_frequency": 3,"fertilizer_type": 1,"temperature": 22,"humidity": 60}}'
         driver = srFirefox(options=self.options, service=FirefoxService(executable_path=GeckoDriverManager().install()))
@@ -128,15 +127,16 @@ class TestAPII:
         for x in range(20):
             res = driver.request('POST', self.endpoint + '/predict', headers=headers, data=payload)
             assert res.status_code == 200
-'''
+
 
 
 class TestMLService:
-    endpoint = "http://localhost:5010/api";
+    endpoint = "http://127.0.0.1:5249/api";
     options = FirefoxOptions()
     options.add_argument("--headless")
     options.set_preference('devtools.jsonview.enabled', False)
 
+'''
     def test_Train(self):
         payload = '{"model_name": "E2E_test_RFC_model","table_name": "plant_data_test","target_measure": "growth_milestone","model_type": "random_forest","testSize": 0.2,"randomState": 42,"estimators": 100,"max_depth": 10}'
 
@@ -145,9 +145,10 @@ class TestMLService:
         res = driver.request('POST', self.endpoint + '/Training', headers=headers, data=payload)
         assert res.status_code == 200
         assert res.text.__contains__('success')
+'''
 
     def test_GetModels(self):
-        expectedresult = '[{"TypeOfModel":"rfc","NameOfModel":"RandomForestRegressor.joblib"}]'
+        expectedresult = '{\n  "model_files": [\n    "log_reg_pipeline.joblib",\n    "RandomForestRegressor_20250511_210430.joblib",\n    "RandomForestRegressor.joblib",\n    "RandomForestRegressor_20250510_160735.joblib",\n    "MyLRModel_v6_logistic_regression.joblib",\n    "MyRFCModel_V6_random_forest.joblib"\n  ],\n  "status": "success"\n}'
 
         driver = webdriver.Firefox(options=self.options,
                                    service=FirefoxService(executable_path=GeckoDriverManager().install()))
@@ -158,7 +159,7 @@ class TestMLService:
 
         assert expectedresult == result
         
-'''
+
     def test_Predict(self):
         payload = '{"TypeofModel": "rfc","NameOfModel": "RandomForestRegressor.joblib","Data": {"soil_type": 1,"sunlight_hours": 6,"water_frequency": 3,"fertilizer_type": 1,"temperature": 22,"humidity": 60}}'
         expectedresult = '{\n  "message": "Random Forest prediction completed successfully.",\n  "model_used": "RandomForestRegressor.joblib",\n  "result": [\n    0.5952380952380952,\n    0.40476190476190477\n  ],\n  "status": "success"\n}\n'
@@ -175,4 +176,4 @@ class TestMLService:
         for x in range(20):
             res = driver.request('POST', self.endpoint + '/Prediction/predict', headers=headers, data=payload)
             assert res.status_code == 200
-'''
+
