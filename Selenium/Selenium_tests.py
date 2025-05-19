@@ -136,7 +136,7 @@ class TestMLService:
     options.add_argument("--headless")
     options.set_preference('devtools.jsonview.enabled', False)
 
-'''
+    '''
     def test_Train(self):
         payload = '{"model_name": "E2E_test_RFC_model","table_name": "plant_data_test","target_measure": "growth_milestone","model_type": "random_forest","testSize": 0.2,"randomState": 42,"estimators": 100,"max_depth": 10}'
 
@@ -145,7 +145,7 @@ class TestMLService:
         res = driver.request('POST', self.endpoint + '/Training', headers=headers, data=payload)
         assert res.status_code == 200
         assert res.text.__contains__('success')
-'''
+    '''
 
     def test_GetModels(self):
         expectedresult = '{\n  "model_files": [\n    "log_reg_pipeline.joblib",\n    "RandomForestRegressor_20250511_210430.joblib",\n    "RandomForestRegressor.joblib",\n    "RandomForestRegressor_20250510_160735.joblib",\n    "MyLRModel_v6_logistic_regression.joblib",\n    "MyRFCModel_V6_random_forest.joblib"\n  ],\n  "status": "success"\n}'
