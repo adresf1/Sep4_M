@@ -199,7 +199,7 @@ def train():
         app.logger.error(f"Error in /train: {str(e)}")
         return jsonify({"error": str(e)}), 500
     finally:
-        if session:
+        if session is not None:
             session.close()
 
 @app.route('/predict', methods=['POST'])
@@ -289,7 +289,7 @@ def predict():
     except KeyError as e:
         return jsonify({"error": f"Missing key: {str(e)}"}), 400
     except ValueError as e:
-        return jsonify({"error": str(e)}), 400  
+        return jsonify({"error": str(e)}), 400
 
     except Exception as e:
         import traceback

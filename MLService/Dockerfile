@@ -11,6 +11,11 @@ COPY . .
 WORKDIR "/src/MLService"
 RUN dotnet build "MLService.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
+WORKDIR /src/MLService.UnitTests
+RUN dotnet restore "MLService.UnitTests.csproj"
+RUN dotnet test "MLService.UnitTests.csproj"
+WORKDIR /src/MLService
+
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
 RUN dotnet publish "MLService.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
