@@ -18,7 +18,7 @@ namespace APII.Controllers;
 public class SensorController : ControllerBase
 {
     private readonly HttpClient _httpClient;
-    private readonly string _pythonServiceUrl = "http://127.0.0.1:5000/fetch-sensor-data"; //"http://Sep4-DataProcessing-Service:5000/fetch-sensor-data";
+    private readonly string _pythonServiceUrl = "http://Sep4-DataProcessing-Service:5000/fetch-sensor-data";
     private readonly string _mlServiceUrl = "http://Sep4-ML-Service:8080/api/prediction"; // ML Service endpoint
 
     public SensorController(HttpClient httpClient)
