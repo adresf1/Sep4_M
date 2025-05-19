@@ -29,6 +29,9 @@ def create_plant_model(table_name):
         temperature = Column(Float)
         humidity = Column(Float)
         growth_milestone = Column(Integer)
+        
+        def __repr__(self):
+            return f"<Plant(id={self.id}, soil_type={self.soil_type}, sunlight_hours={self.sunlight_hours}, ...)>"
 
     return Plant
 

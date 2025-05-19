@@ -1,51 +1,63 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace APII.Models
 {
     public class DemoPlantDTO
     {
+        [JsonPropertyName("Id")]
         public int Id { get; set; }
-        public string Soil_Type { get; set; }
-        public string Water_Frequency { get; set; }
-        public string Fertilizer_Type { get; set; }
-        private float sunlight_Hours;
-        private float temperature;
-        private float humidity;
 
-        public float Sunlight_Hours
+        [JsonPropertyName("soil_type")]
+        public string soil_type { get; set; }
+
+        [JsonPropertyName("water_frequency")]
+        public string water_frequency { get; set; }
+
+        [JsonPropertyName("fertilizer_type")]
+        public string fertilizer_type { get; set; }
+
+        private float _sunlight_hours;
+        private float _temperature;
+        private float _humidity;
+
+        [JsonPropertyName("sunlight_hours")]
+        public float sunlight_hours
         {
-            get => sunlight_Hours;
+            get => _sunlight_hours;
             set
             {
                 if (value < 0 || value > 24)
-                    throw new ArgumentOutOfRangeException(nameof(Sunlight_Hours), "Sunlight hours must be between 0 and 24.");
-                sunlight_Hours = value;
+                    throw new ArgumentOutOfRangeException(nameof(sunlight_hours), "Sunlight hours must be between 0 and 24.");
+                _sunlight_hours = value;
             }
         }
 
-        public float Temperature
+        [JsonPropertyName("temperature")]
+        public float temperature
         {
-            get => temperature;
+            get => _temperature;
             set
             {
                 if (value < -50 || value > 60)
-                    throw new ArgumentOutOfRangeException(nameof(Temperature), "Temperature must be between -50 and 60 Celsius.");
-                temperature = value;
+                    throw new ArgumentOutOfRangeException(nameof(temperature), "Temperature must be between -50 and 60 Celsius.");
+                _temperature = value;
             }
         }
 
-        public float Humidity
+        [JsonPropertyName("humidity")]
+        public float humidity
         {
-            get => humidity;
+            get => _humidity;
             set
             {
                 if (value < 0 || value > 100)
-                    throw new ArgumentOutOfRangeException(nameof(Humidity), "Humidity must be between 0% and 100%.");
-                humidity = value;
+                    throw new ArgumentOutOfRangeException(nameof(humidity), "Humidity must be between 0% and 100%.");
+                _humidity = value;
             }
         }
 
-        //Target meassure
-        public int Growth_Milestone { get; set; }
+        [JsonPropertyName("growth_milestone")]
+        public int growth_milestone { get; set; }
     }
 }

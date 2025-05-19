@@ -79,19 +79,25 @@ namespace APII.Controllers
             }
         }
 
-        // PUT: api/DemoData/{id}
-        [HttpPut("{id}")]
+        // POST: api/DemoDataRaw/{id}
+        [HttpPost("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] DemoPlantDTO updatedItem)
         {
             try
             {
                 var content = new StringContent(JsonConvert.SerializeObject(updatedItem), Encoding.UTF8, "application/json");
-                var response = await _httpClient.PutAsync($"{_pythonServiceUrl}/{id}", content);
+
+                // Send POST request instead of PUT
+                var response = await _httpClient.PostAsync($"{_pythonServiceUrl}/{id}", content);
 
                 if (!response.IsSuccessStatusCode)
-                    return NotFound($"Item with ID {id} not found or update failed.");
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    return NotFound($"Item with ID {id} not found or update failed. Details: {responseContent}");
+                }
 
-                return NoContent();
+                var successContent = await response.Content.ReadAsStringAsync();
+                return Ok(JsonConvert.DeserializeObject(successContent));
             }
             catch (Exception ex)
             {

@@ -9,6 +9,7 @@ import math
 import os
 from dotenv import load_dotenv, find_dotenv, dotenv_values
 from DemoData import create_sensor_data_model, get_model_for_table, create_plant_model, calculate_column_averages, create_preprocessed_plant_model, one_hot_encode_columns, copy_to_preprocessed
+from db import SessionLocal
 from sqlalchemy import distinct, create_engine, inspect
 from mock_alchemy.mocking import UnifiedAlchemyMagicMock
 from sqlalchemy.ext.declarative import declarative_base
@@ -38,7 +39,7 @@ def post_sensor_data():
         if not isinstance(payload, list):
             return jsonify({'error': 'Expected a list of sensor data'}), 400
 
-        engine, session = get_engine_and_session(DATABASE_URL)
+        session = SessionLocal()
 
         # Use the cached model
         SensorData = get_model_for_table('sensor_data')
@@ -96,7 +97,7 @@ def fetch_sensor_data():
 
     session = None
     try:
-        engine, session = get_engine_and_session(DATABASE_URL)
+        session = SessionLocal()
 
         # Use the cached model
         SensorData = get_model_for_table('sensor_data')
@@ -151,7 +152,7 @@ def get_single_plant_data(id):
         if id < 1:
             return jsonify({'error': 'Invalid ID'}), 400
 
-        engine, session = get_engine_and_session(DATABASE_URL)
+        session = SessionLocal()
         PlantDataTest = create_plant_model('plant_data_test')
 
         entry = session.get(PlantDataTest, id)
@@ -187,7 +188,7 @@ def get_plant_data():
 
     session = None
     try:
-        engine, session = get_engine_and_session(DATABASE_URL)
+        session = SessionLocal()
         PlantDataTest = create_plant_model('plant_data_test')
 
         data = session.query(PlantDataTest).all()
@@ -222,7 +223,7 @@ def add_plant_data():
 
     session = None
     try:
-        engine, session = get_engine_and_session(DATABASE_URL)
+        session = SessionLocal()
         PlantDataTest = create_plant_model('plant_data_test')
         data = request.get_json()
 
@@ -265,9 +266,11 @@ def update_plant_data(id):
         if id < 1:
             return jsonify({'error': 'Invalid ID'}), 400
 
-        engine, session = get_engine_and_session(DATABASE_URL)
+        session = SessionLocal()
         PlantDataTest = create_plant_model('plant_data_test')
         data = request.get_json()
+         
+        print(f"Incoming JSON: {data}")
 
         # Type checks (same as original)
         if 'soil_type' in data and not isinstance(data['soil_type'], str):
@@ -294,6 +297,7 @@ def update_plant_data(id):
             return jsonify({'error': 'Invalid data type for growth_milestone'}), 400
 
         entry = session.get(PlantDataTest, id)
+        print(f"Retrieved DB entry before update: {entry}")
         if entry is None:
             return jsonify({'error': f'Entry with id {id} not found'}), 404
 
@@ -317,6 +321,7 @@ def update_plant_data(id):
     finally:
         if session:
             session.close()
+            print("Session closed")
 
 
 @app.route('/DemoDataRaw/<int:id>', methods=['DELETE'])
@@ -327,7 +332,7 @@ def delete_plant_data(id):
 
     session = None
     try:
-        engine, session = get_engine_and_session(DATABASE_URL)
+        session = SessionLocal()
         PlantDataTest = create_plant_model('plant_data_test')
         
         entry = session.get(PlantDataTest, id)
@@ -357,7 +362,7 @@ def get_unique_plant_data_fields():
 
     session = None
     try:
-        engine, session = get_engine_and_session(DATABASE_URL)
+        session = SessionLocal()
         PlantDataTest = create_plant_model('plant_data_test')
 
         unique_soil_types = [row[0] for row in session.query(distinct(PlantDataTest.soil_type)).all()]
@@ -392,6 +397,7 @@ def preprocess_data():
             return jsonify({'error': 'Both CopyFrom and CopyTo table names must be provided.'}), 400
 
         # Dynamically create models from table names
+        #wrong needs to be refactored
         PlantModel = create_plant_model(copy_from)
         PlantPreprocessed = create_preprocessed_plant_model(copy_to)
         
