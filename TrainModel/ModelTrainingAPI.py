@@ -5,7 +5,7 @@ import sys, os
 from flask import Flask, request, jsonify, abort
 from werkzeug.exceptions import HTTPException
 import pandas as pd
-from TrainRFCModel import train_model
+from TrainRFCModel import train_model, _common_preprocessing, train_and_save_lr_model
 from Predict import unpack_model, makePrediction, REQUIRED_FIELDS_RFC
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -16,8 +16,17 @@ from sklearn.linear_model import LogisticRegression  # Import Logistic Regressio
 from datetime import datetime
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.model_selection import train_test_split
 from dotenv import load_dotenv
 load_dotenv()
+
+ALLOWED_MODEL_TYPES ={'random_forest', 'logistic_regression'}
+SHORTCUT_MAP = {
+    'rfc': 'random_forrest',
+    'rf': 'random_forest',
+    'lr': 'logistic_regression',
+    'logistic': 'logistic_regression',
+}
 
 
 app = Flask(__name__)
@@ -62,81 +71,157 @@ def get_model_for_table(table_name, DATABASE_URL):
 # API endpoint to train the model
 @app.route('/train', methods=['POST'])
 def train():
-    # Get the incoming JSON data from the request
-    data = request.get_json(silent=True)
+    data = request.get_json(force=True)
 
     if not data:
         return jsonify({"error": "No JSON data provided"}), 400
-    
-    session = None #Session bliver oprettet i try-blokken
+
+    # Tvangsfelter: model_name, table_name, target_measure (understøtter camelCase og snake_case)
+    model_name = data.get('model_name')
+    table_name = data.get('table_name')
+    target_measure = data.get('targetMeasure') or data.get('target_measure')
+    model_type = data.get('model_type', 'random_forest')  # default til random_forest
+
+    # Brug eksplicit kontrol i stedet for locals()[k] for at undgå KeyError
+    missing_fields = []
+    if not model_name:
+        missing_fields.append('model_name')
+    if not table_name:
+        missing_fields.append('table_name')
+    if not target_measure:
+        missing_fields.append('target_measure')
+
+    if missing_fields:
+        return jsonify({"error": f"Missing required fields: {', '.join(missing_fields)}"}), 400
+
+
+    # Model-type validering + mapping
+    model_type = model_type.lower()
+    model_type = SHORTCUT_MAP.get(model_type, model_type)
+    if model_type not in ALLOWED_MODEL_TYPES:
+        return jsonify({"error": f"Invalid model type '{model_type}'. Allowed types are: {', '.join(ALLOWED_MODEL_TYPES)}"}), 400
+
+    # Hent parametre fra payload
+    test_size = float(data.get('testSize', 0.2))
+    random_state = int(data.get('randomState', 42))
+
+    # RFC parametre
+    estimators = int(data.get('estimators', 100))
+    max_depth = data.get('max_depth')
+    if max_depth is not None:
+        max_depth = int(max_depth)
+
+    # LR parametre
+    solver = data.get('solver', 'lbfgs')
+    penalty = data.get('penalty', 'l2')
+    C = float(data.get('C', 1.0))
+    max_iter = int(data.get('max_iter', 1000))
+
+    # Database URL
+    DATABASE_URL = data.get('db_url') or os.getenv('DATABASE_URL')
+    if not DATABASE_URL:
+        return jsonify({"error": "DATABASE_URL not set in environment variables"}), 500
+
     try:
-        model_name = data.get('model_name')
-        table_name = data.get('table_name')
-        target_measure = data.get('target_measure')
-        test_size = float(data.get('test_size', 0.2))
-        estimators = int(data.get('estimators', 100))
-        random_state = int(data.get('random_state', 42))
-        model_type = data.get('model_type') 
-
-        if not table_name or not target_measure or not model_name:
-            return jsonify({"error": "Missing required fields: 'table_name', 'model_name' and 'target_measure'"}), 400
-
-        #DATABASE_URL = data.get('DATABASE_URL', os.getenv('DATABASE_URL'))
-        DATABASE_URL = os.getenv('DATABASE_URL')
-        if not DATABASE_URL:
-            return jsonify({"error": "DATABASE_URL not provided and not found in environment variables."}), 400
-        
-        
+        # ORM-model og data
         PlantModel = get_model_for_table(table_name, DATABASE_URL)
         engine = create_engine(DATABASE_URL)
         Session = sessionmaker(bind=engine)
         session = Session()
-        
-        # Query all data from the table
-        data = session.query(PlantModel).all()
-        if not data:
-            return jsonify({"error":f"No data found in the table. '{table_name}'."}), 404
-        # Convert the queried data to a DataFrame
-        df = pd.DataFrame([plant.to_dict() for plant in data])
-        
-        # Train the RandomForest model
-        rfc, msg = train_model(targetMeasure=target_measure, trainningData=df, testSize=test_size, estimators=42, randomState=random_state,  model_type=model_type)
 
-        # Save the trained RandomForest model to a binary file
-        model_name = save_model_to_folder(rfc, model_name, "TrainedModels")
-        
-        # Return a success response with the model filename and evaluation metrics
-        response = {
+        records = session.query(PlantModel).all()
+        if not records:
+            return jsonify({"error": f"No records found in table '{table_name}'"}), 404
+
+        # Konverter til DataFrame
+        df = pd.DataFrame([record.to_dict() for record in records])
+        #Fjern whitespace fra kolonnenavne
+        df.columns = df.columns.str.strip()
+        # print("DF COLUMNS:", df.columns.to_list())
+        # print("DROPPING:", target_measure)
+
+        #Split data i X og y
+        #X = df.drop([target_measure], axis=1)
+        #y = df[target_measure]
+
+        print(">>> TYPE OF df:", type(df), " | VALUE:", df)
+        print(">>> TARGET_MEASURE:", repr(target_measure))
+
+        X_train, X_test, y_train, y_test = _common_preprocessing(df, target_measure, test_size, random_state)
+
+        metrics = {}
+        filename = None
+
+        if model_type == 'logistic_regression':
+            base_name = f"{model_name}_{model_type}"
+            #træn og gem pipeline
+            filename = train_and_save_lr_model(X_train,y_train, base_name)
+            #Evaluering af pipeline:
+            from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+            pipeline = joblib.load(os.path.join("TrainedModels", filename))
+            prediction = pipeline.predict(X_test)
+            metrics = {
+                'accuracy': round(accuracy_score(y_test, prediction),4),
+                'precision':round(precision_score(y_test, prediction, zero_division=0)),
+                'recall': round(recall_score(y_test, prediction, zero_division=0),4),
+                'f1': round(f1_score(y_test, prediction, zero_division=0),4),
+            }
+        else:
+            #til train dispatcher
+            clf, metrics = train_model(
+            X_train=X_train,
+            X_test=X_test,
+            y_train=y_train,
+            y_test=y_test,
+            model_type=model_type,
+            estimators=estimators,
+            max_depth=max_depth,
+            solver=solver,
+            penalty=penalty,
+            C=C,
+            max_iter=max_iter,
+            random_state=random_state
+        )
+
+            # Gem modellen
+            filename = save_model_to_folder(clf, f"{model_name}_{model_type}", "TrainedModels")
+
+        return jsonify({
             "status": "success",
-            "message": "RandomForest model trained successfully.",
-            "model_filename": model_name,
-            "evaluation_metrics": msg
-        }
+            "message": f"{model_type.replace('_', ' ').title()} model trained successfully.",
+            "model_name": filename,
+            "evaluation_metrics": metrics
+        }), 200
 
-        return jsonify(response), 200
-
-    except HTTPException: 
+    except HTTPException:
         raise
-
     except Exception as e:
-        print(str(e))
-        exc_type, exc_obj, exc_tb = sys.exc_info()
-        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-        return jsonify({"error": f"Failed to process request: {str(e)}"}), 500
-
+        app.logger.error(f"Error in /train: {str(e)}")
+        return jsonify({"error": str(e)}), 500
     finally:
         if session is not None:
-            session.close()      
+            session.close()
 
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
         payload = request.get_json(force=True)
+        if not payload:
+            return jsonify({"error": "No JSON data provided"}), 400
+        if 'Data' not in payload or not isinstance(payload['Data'], dict):
+            return jsonify({"error": "Invalid or missing 'Data' field"}), 400
+        if 'NameOfModel' not in payload:
+            return jsonify({"error": "Missing 'NameOfModel' field"}), 400
 
         # Identifikation af modeltype
         model_type = payload.get('TypeofModel') or 'logistic_regression'
         model_name = payload.get('NameOfModel') or payload.get('ModelName')
         data = payload.get('Data')
+        #normaliser data
+        data_dict = {}
+        for k, v in data.items():
+            key = ''.join(['_'+c.lower() if c.isupper()else c for c in k]).lstrip('_')
+            data_dict[key.replace(' ', '_')] = v
 
         if not model_name or not data:
             return jsonify({"error": "Missing 'ModelName' or 'Data'"}), 400
@@ -144,23 +229,23 @@ def predict():
         # RFC logik
         if model_type.lower() in ['rfc', 'random_forest']:
             # Valider påkrævede felter
-            missing_fields = REQUIRED_FIELDS_RFC - data.keys()
+            missing_fields = REQUIRED_FIELDS_RFC - data_dict.keys()
             if missing_fields:
                 return jsonify({
                     "error": f"Missing fields for Random Forest model: {', '.join(missing_fields)}"
                 }), 400
 
             # Grænseværdi-validering for RFC
-            
-            if not (1 <= data['sunlight_hours'] <= 24):
+
+            if not (1 <= data_dict['sunlight_hours'] <= 24):
                 return jsonify({"error": "Sunlight_Hours must be between 1 and 24"}), 400
-            if not (0 <= data['temperature'] <= 50):
+            if not (0 <= data_dict['temperature'] <= 50):
                 return jsonify({"error": "Temperature must be between 0 and 50"}), 400
-            if not (10 <= data['humidity'] <= 100):
+            if not (10 <= data_dict['humidity'] <= 100):
                 return jsonify({"error": "Humidity must be between 10 and 100"}), 400
 
             model = unpack_model(model_name, "TrainedModels")
-            result = makePrediction(model, data)
+            result = makePrediction(model, data_dict)
 
             return jsonify({
                 "status": "success",
@@ -171,22 +256,22 @@ def predict():
 
         # Logistic Regression logik
         elif model_type.lower() in ['logistic', 'logistic_regression']:
-            if not (1 <= data['Sunlight_Hours'] <= 24):
+            if not (1 <= data_dict['sunlight_hours'] <= 24):
                 return jsonify({"error": "Sunlight_Hours must be between 1 and 24"}), 400
-            if not (0 <= data['Temperature'] <= 50):
+            if not (0 <= data_dict['temperature'] <= 50):
                 return jsonify({"error": "Temperature must be between 0 and 50"}), 400
-            if not (10 <= data['Humidity'] <= 100):
+            if not (10 <= data_dict['humidity'] <= 100):
                 return jsonify({"error": "Humidity must be between 10 and 100"}), 400
 
-            model_path = os.path.join(os.getcwd(), "TrainedModels", model_name)
+            model_path = os.path.join("TrainedModels", model_name)
             if not os.path.exists(model_path):
                 return jsonify({"error": f"Model '{model_name}' not found in TrainedModels"}), 404
 
             pipeline_model = joblib.load(model_path)
-            df_input = pd.DataFrame([data])
+            df_input = pd.DataFrame([data_dict])
 
             prediction = pipeline_model.predict(df_input)[0]
-            probability = max(pipeline_model.predict_proba(df_input)[0])
+            probability = pipeline_model.predict_proba(df_input)[0].max()
 
             return jsonify({
                 "status": "success",
@@ -198,6 +283,13 @@ def predict():
 
         else:
             return jsonify({"error": f"Unsupported model type '{model_type}'"}), 400
+
+    except FileNotFoundError as e:
+        return jsonify({"error": str(e)}), 404
+    except KeyError as e:
+        return jsonify({"error": f"Missing key: {str(e)}"}), 400
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
 
     except Exception as e:
         import traceback
