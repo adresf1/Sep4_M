@@ -1,20 +1,31 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import os
-from dotenv import load_dotenv
-load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL") or 'postgresql://dummy_url'
+_engine = None
+_SessionLocal = None
 
-if DATABASE_URL == 'postgresql://dummy_url':
-    print("Application have defaulted to dummy connection string")
+def get_database_url():
+    return os.getenv("DATABASE_URL", "postgresql://dummy_url")
 
-engine = create_engine(
-    DATABASE_URL,
-    pool_size=5,
-    max_overflow=2,
-    pool_recycle=1800,
-    pool_pre_ping=True
-)
+def get_engine():
+    global _engine
+    if _engine is None:
+        db_url = get_database_url()
+        _engine = create_engine(
+            db_url,
+            pool_size=5,
+            max_overflow=2,
+            pool_recycle=1800,
+            pool_pre_ping=True
+        )
+    return _engine
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+def get_session_local():
+    global _SessionLocal
+    if _SessionLocal is None:
+        _SessionLocal = sessionmaker(bind=get_engine())
+    return _SessionLocal
+
+def SessionLocal():
+    return get_session_local()()
