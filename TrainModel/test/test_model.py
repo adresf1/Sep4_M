@@ -6,11 +6,9 @@ from pathlib import Path
 
 import sqlalchemy
 # Importér modulet under test
-from ModelTrainingAPI import app, save_model_to_folder, get_model_for_table
+from ModelTrainingAPI import app, save_model_to_folder, get_model_for_table, DBSingleton
 from Predict import unpack_model, makePrediction, REQUIRED_FIELDS_RFC
 from mock_alchemy.mocking import UnifiedAlchemyMagicMock
-
-from TrainModel.ModelTrainingAPI import DBSingleton
 
 
 # --- Dummy-klasser ----------------------------------------------------------
