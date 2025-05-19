@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 #Test
-RUN python -m pytest > test.txt
+RUN  python -m pytest ./DataProcessing/tests/ > test.txt
 
 #Åbner bash
 CMD ["bash"]
