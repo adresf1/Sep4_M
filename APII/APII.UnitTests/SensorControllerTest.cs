@@ -5,6 +5,8 @@ using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using RichardSzalay.MockHttp;
+using System.Text;
+using Microsoft.AspNetCore.Http;
 
 namespace APII.UnitTests;
 
@@ -142,7 +144,21 @@ public class SensorControllerTest
         var request = _mockedHandler.When(method: HttpMethod.Post, "http://Sep4-ML-Service:8080/api/prediction/predict")
             .Respond("application/json", resultPayload);
         
-        var response = await _sensorController.PredictUnified(JsonConvert.SerializeObject(req));
+        // Set request
+        var requestMessage = new HttpRequestMessage();
+        requestMessage.Method = HttpMethod.Post;
+        requestMessage.Content = new StringContent(JsonConvert.SerializeObject(req));
+        var stream = new MemoryStream(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(req)));
+        var controllerContext = new ControllerContext()
+        {
+            HttpContext = new DefaultHttpContext()
+            {
+                Request = { Body = stream, ContentLength = stream.Length }
+            }
+        };
+        _sensorController.ControllerContext = controllerContext;
+        
+        var response = await _sensorController.PredictUnified();
         var result = ((OkObjectResult)response.Result).Value;
         
         Assert.That(_mockedHandler.GetMatchCount(request), Is.EqualTo(1));
