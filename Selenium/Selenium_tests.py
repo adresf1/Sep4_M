@@ -62,6 +62,8 @@ class TestAPII:
             session.commit()
         PlantData.create(engine)
         session.commit()
+        session.close()
+        engine.dispose()
 
 
     def test_PostSensor(self):
@@ -117,6 +119,16 @@ class TestAPII:
 
         assert expectedresult == result
 
+    def test_APII_DBSessionLeak(self):
+        payload = '{"TypeofModel": "rfc","NameOfModel": "RandomForestRegressor.joblib","Data": {"soil_type": 1,"sunlight_hours": 6,"water_frequency": 3,"fertilizer_type": 1,"temperature": 22,"humidity": 60}}'
+        driver = srFirefox(options=self.options, service=FirefoxService(executable_path=GeckoDriverManager().install()))
+        headers = {'Content-type': 'application/json'}
+        for x in range(20):
+            res = driver.request('POST', self.endpoint + '/predict', headers=headers, data=payload)
+            assert res.status_code == 200
+
+
+
 class TestMLService:
     endpoint = "http://localhost:5249/api";  # "http://Sep4-ML-Service:8080/api";
     options = FirefoxOptions()
@@ -124,7 +136,7 @@ class TestMLService:
     options.set_preference('devtools.jsonview.enabled', False)
 
     def test_Train(self):
-        payload = '{"model_name": "string", "table_name": "sensor_data", "target_measure": "string", "test_size": 0, "estimators": 0, "random_state": 0}'
+        payload = '{"model_name": "E2E_test_RFC_model","table_name": "plant_data_test","target_measure": "growth_milestone","model_type": "random_forest","testSize": 0.2,"randomState": 42,"estimators": 100,"max_depth": 10}'
 
         driver = srFirefox(options=self.options, service=FirefoxService(executable_path=GeckoDriverManager().install()))
         headers = {'Content-type': 'application/json'}
@@ -152,3 +164,11 @@ class TestMLService:
         res = driver.request('POST', self.endpoint + '/Prediction/predict', headers=headers, data=payload)
         assert res.status_code == 200
         assert res.text == expectedresult
+
+    def test_MLService_DBSessionLeak(self):
+        payload = '{"model_name": "E2E_test_RFC_model","table_name": "plant_data_test","target_measure": "growth_milestone","model_type": "random_forest","testSize": 0.2,"randomState": 42,"estimators": 100,"max_depth": 10}'
+        driver = srFirefox(options=self.options, service=FirefoxService(executable_path=GeckoDriverManager().install()))
+        headers = {'Content-type': 'application/json'}
+        for x in range(20):
+            res = driver.request('POST', self.endpoint + '/Prediction/predict', headers=headers, data=payload)
+            assert res.status_code == 200

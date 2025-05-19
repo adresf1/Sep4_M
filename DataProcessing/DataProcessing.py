@@ -19,11 +19,16 @@ from pathlib import Path
 load_dotenv()
 
 app = Flask(__name__)
+class DBSingleton(object):
+    def __new__(cls, DATABASE_URL):
+        if not hasattr(cls, "engine"):
+            cls.engine = create_engine(DATABASE_URL)
+            Sessionmaker = sessionmaker(bind=cls.engine)
+            cls.session = Sessionmaker()
+        return cls.engine, cls.session
 
 def get_engine_and_session(DATABASE_URL):
-    engine = create_engine(DATABASE_URL)
-    Session = sessionmaker(bind=engine)
-    return engine, Session()
+    return DBSingleton(DATABASE_URL)
 
 print("Db connection started...")
 
