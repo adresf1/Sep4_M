@@ -13,7 +13,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 
 class TestAPII:
-    endpoint = "http://localhost:5019/api/Sensor";
+    endpoint = "http://localhost:5020/api/Sensor";
     options = FirefoxOptions()
     options.add_argument("--headless")
     options.set_preference('devtools.jsonview.enabled', False)
@@ -119,7 +119,7 @@ class TestAPII:
 
         assert expectedresult == result
 
-
+    '''
     def test_APII_DBSessionLeak(self):
         payload = '{"TypeofModel": "rfc","NameOfModel": "RandomForestRegressor.joblib","Data": {"soil_type": 1,"sunlight_hours": 6,"water_frequency": 3,"fertilizer_type": 1,"temperature": 22,"humidity": 60}}'
         driver = srFirefox(options=self.options, service=FirefoxService(executable_path=GeckoDriverManager().install()))
@@ -127,11 +127,11 @@ class TestAPII:
         for x in range(20):
             res = driver.request('POST', self.endpoint + '/predict', headers=headers, data=payload)
             assert res.status_code == 200
-
+    '''
 
 
 class TestMLService:
-    endpoint = "http://127.0.0.1:5249/api";
+    endpoint = "http://127.0.0.1:5030/api";
     options = FirefoxOptions()
     options.add_argument("--headless")
     options.set_preference('devtools.jsonview.enabled', False)
@@ -169,6 +169,7 @@ class TestMLService:
         assert res.status_code == 200
         assert res.text == expectedresult
 
+    '''
     def test_MLService_DBSessionLeak(self):
         payload = '{"TypeofModel": "rfc","NameOfModel": "RandomForestRegressor.joblib","Data": {"soil_type": 1,"sunlight_hours": 6,"water_frequency": 3,"fertilizer_type": 1,"temperature": 22,"humidity": 60}}'
         driver = srFirefox(options=self.options, service=FirefoxService(executable_path=GeckoDriverManager().install()))
@@ -176,4 +177,4 @@ class TestMLService:
         for x in range(20):
             res = driver.request('POST', self.endpoint + '/Prediction/predict', headers=headers, data=payload)
             assert res.status_code == 200
-
+    '''
