@@ -124,7 +124,7 @@ class TestMLService:
     options.set_preference('devtools.jsonview.enabled', False)
 
     def test_Train(self):
-        payload = '{"model_name": "string", "table_name": "sensor_data", "target_measure": "string", "test_size": 0, "estimators": 0, "random_state": 0}'
+        payload = '{"model_name": "E2E_test_RFC_model","table_name": "plant_data_test","target_measure": "growth_milestone","model_type": "random_forest","testSize": 0.2,"randomState": 42,"estimators": 100,"max_depth": 10}'
 
         driver = srFirefox(options=self.options, service=FirefoxService(executable_path=GeckoDriverManager().install()))
         headers = {'Content-type': 'application/json'}
