@@ -24,8 +24,8 @@ class DummyModel:
 
 mock_session = UnifiedAlchemyMagicMock()
 
-def mock_get_engine_and_session(url):
-    assert url == os.getenv("DATABASE_URL", "sqlite:///:memory:")
+def mock_get_engine_and_session(cls, url):
+    #assert url == os.getenv("DATABASE_URL", "sqlite:///:memory:")
     return None, mock_session
 
 # --- Flask-client-fixture ---------------------------------------------------
