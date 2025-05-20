@@ -67,4 +67,7 @@ services:
 
 networks:
   SEP4_NETWORK:
+    external: true
 
+
+  
